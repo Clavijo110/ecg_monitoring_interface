@@ -9,7 +9,25 @@
 <body>
   <div id="root"></div>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // Detectar URL del backend y cargar Socket.io desde allá
+    const getBackendURL = () => {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3001';
+      }
+      return window.location.origin.includes('vercel.app') 
+        ? 'https://ecg-monitoring-interface-backend.onrender.com'
+        : window.location.origin;
+    };
+    
+    const backendURL = getBackendURL();
+    
+    // Crear script de Socket.io dinámicamente
+    const script = document.createElement('script');
+    script.src = backendURL + '/socket.io/socket.io.js';
+    document.head.appendChild(script);
+  </script>
+
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

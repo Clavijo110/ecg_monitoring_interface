@@ -104,6 +104,8 @@ Build Command:       (dejar vacío)
 Environment:         (dejar por defecto)
 ```
 
+**Nota**: Vercel servará automáticamente los archivos estáticos de la carpeta `Public/`
+
 #### 3.3 Deploy
 Click "Deploy" y espera a que termine (~2 minutos)
 
@@ -122,15 +124,22 @@ https://ecg-monitoring-interface.vercel.app
    ```
 
 2. **Deberías ver**:
-   - ✅ Interfaz completa cargada
+   - ✅ Interfaz completa cargada (no solo un color)
    - ✅ Status "Socket conectado" en los logs
    - ✅ Gráfico renderizado
    - ✅ Botones de controles funcionales
 
-3. **Si algo no funciona**:
+3. **Si la página está en blanco o solo muestra un color**:
+   - Abre F12 → Console
+   - Verifica que no hay errores de 404
+   - El script: `/socket.io/socket.io.js` debe cargarse desde el backend en Render
+   - Revisa que la URL del backend sea correcta en `Public/index.html`
+
+4. **Si algo no funciona**:
    - Abre la consola (F12)
    - Busca mensajes de error
-   - Verifica que la URL del backend sea correcta en `app.js`
+   - Verifica que la URL del backend sea correcta en `Public/index.html`
+   - Verifica que el backend en Render está corriendo sin errores
 
 ---
 
