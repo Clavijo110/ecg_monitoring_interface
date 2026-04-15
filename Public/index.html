@@ -10,25 +10,39 @@
   <div id="root"></div>
 
   <script>
-    // Detectar URL del backend y cargar Socket.io desde allá
-    const getBackendURL = () => {
+    // Helper para detectar URL del backend
+    window.getBackendURL = () => {
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return 'http://localhost:3001';
       }
       return 'https://ecg-monitoring-interface-backend.onrender.com';
     };
-    
-    const backendURL = getBackendURL();
-    
-    // Crear script de Socket.io dinámicamente
-    const script = document.createElement('script');
-    script.src = backendURL + '/socket.io/socket.io.js';
-    document.head.appendChild(script);
   </script>
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="app.js"></script>
+
+  <!-- Cargar Socket.io desde el backend ANTES de app.js -->
+  <script>
+    const backendURL = window.getBackendURL();
+    const socketScript = document.createElement('script');
+    socketScript.src = backendURL + '/socket.io/socket.io.js';
+    socketScript.onload = function() {
+      console.log('Socket.io cargado desde:', backendURL);
+      // Cargar app.js DESPUÉS de que Socket.io esté listo
+      const appScript = document.createElement('script');
+      appScript.src = 'app.js';
+      document.body.appendChild(appScript);
+    };
+    socketScript.onerror = function() {
+      console.error('Error cargando Socket.io desde:', backendURL);
+      // Fallback: cargar app.js de todas formas pero sin Socket.io
+      const appScript = document.createElement('script');
+      appScript.src = 'app.js';
+      document.body.appendChild(appScript);
+    };
+    document.head.appendChild(socketScript);
+  </script>
 </body>
 </html>
