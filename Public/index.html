@@ -17,6 +17,11 @@
       }
       return 'https://ecg-monitoring-interface-backend.onrender.com';
     };
+
+    // Información en la consola
+    console.log('🏥 ECG Monitoring Interface v1.0.0');
+    console.log('📡 Backend:', window.getBackendURL());
+    console.log('💡 Nota: Sin Hardware ECG conectado, verá errores de puerto serial (esperado)');
   </script>
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -28,20 +33,43 @@
     const backendURL = window.getBackendURL();
     const socketScript = document.createElement('script');
     socketScript.src = backendURL + '/socket.io/socket.io.js';
+    
     socketScript.onload = function() {
-      console.log('Socket.io cargado desde:', backendURL);
-      // Cargar app.js DESPUÉS de que Socket.io esté listo
-      const appScript = document.createElement('script');
-      appScript.src = 'app.js';
-      document.body.appendChild(appScript);
+      console.log('✅ Socket.io cargado desde:', backendURL);
+      
+      if (typeof io !== 'undefined') {
+        console.log('✅ io() está disponible, configurando conexión...');
+        
+        // Configurar Socket.io para intentar WebSocket primero, luego polling
+        window.socketConfig = {
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: 10,
+          transports: ['websocket', 'polling'],
+          extraHeaders: {}
+        };
+        
+        console.log('✅ Socket.io configurado y listo para app.js');
+        // Cargar app.js DESPUÉS de que Socket.io esté 100% listo
+        const appScript = document.createElement('script');
+        appScript.src = 'app.js';
+        document.body.appendChild(appScript);
+      } else {
+        console.error('❌ io() NO está disponible después de cargar Socket.io');
+      }
     };
+    
     socketScript.onerror = function() {
-      console.error('Error cargando Socket.io desde:', backendURL);
+      console.error('❌ No se pudo cargar Socket.io desde:', socketScript.src);
+      console.error('💡 Asegúrate que el backend está corriendo y accesible');
+      
       // Fallback: cargar app.js de todas formas pero sin Socket.io
       const appScript = document.createElement('script');
       appScript.src = 'app.js';
       document.body.appendChild(appScript);
     };
+    
     document.head.appendChild(socketScript);
   </script>
 </body>

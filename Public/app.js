@@ -244,10 +244,25 @@ function App() {
     loadPorts();
     checkStatus();
 
-    const socket = io(getBackendURL());
+    // Usar configuración de Socket.io desde index.html o crear con valores por defecto
+    const socketConfig = window.socketConfig || {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 10,
+      transports: ['websocket', 'polling']
+    };
+
+    const socket = io(getBackendURL(), socketConfig);
 
     socket.on("connect", () => {
-      setStatus("Socket conectado");
+      setStatus("✅ Socket conectado");
+      console.log("✅ Socket.io conectado exitosamente");
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("❌ Error al conectar Socket.io:", error);
+      setStatus("Error conectando a backend");
     });
 
     socket.on("mensaje", (data) => {
