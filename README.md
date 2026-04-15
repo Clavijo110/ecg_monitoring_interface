@@ -1,158 +1,210 @@
-# ECG Monitoring Interface
+# ECG Monitoring Interface - Frontend
 
-Interfaz web moderna y profesional para monitoreo de ECG en tiempo real con control serial y visualización dual de señales (ECG y Marcapasos).
+Interfaz moderna y responsiva para monitoreo de ECG en tiempo real. Construida con React 18 y Chart.js.
 
-## Características
+## 🎯 Características
 
-- 🎨 **Interfaz Modern**: Diseño glassmorphism oscuro con gradientes suaves
-- 📊 **Gráficas en Tiempo Real**: Visualización de dos señales simultáneamente (ECG y Marcapasos)
-- 🔌 **Control Serial**: Conexión y comunicación con puertos seriales
-- 🎮 **Controles Intuitivos**: Toggle de señales, selección de derivadas, modos manual/automático
-- 📱 **Responsive**: Adaptable a cualquier dispositivo
-- 🔄 **Socket.io**: Comunicación bidireccional en tiempo real
-- 📋 **Registro de Eventos**: Panel de actividad del sistema
+- 🎨 Diseño glassmorphism moderno
+- 📊 Visualización dual de señales (ECG + Marcapasos)
+- 🎯 Toggle independiente para cada señal (mínimo una siempre activa)
+- 📱 Responsive design (desktop, tablet, mobile)
+- ⚡ Comunicación en tiempo real vía WebSocket (Socket.io)
+- 📝 Log en vivo de eventos del sistema
+- 🎛️ Controles intuitivos para el dispositivo
 
-## Requisitos
+## 🏗️ Tecnologías
 
-- Node.js >= 14
-- npm o yarn
-- Puerto serie USB (para dispositivo ECG real)
+- **React 18** - Framework UI (CDN unpkg)
+- **Chart.js** - Visualización de datos en tiempo real
+- **Socket.io** - Comunicación bidireccional WebSocket
+- **CSS Moderno** - Glassmorphism, CSS variables, grid responsivo
 
-## Instalación
+## 📁 Estructura
 
+```
+.
+├── Public/
+│   ├── index.html        # Entrada HTML con CDN imports
+│   ├── app.js           # Aplicación React completa (~1000 líneas)
+│   └── style.css        # Estilos glassmorphism (~600 líneas)
+├── package.json         # Dependencias
+└── README.md
+```
+
+## 🚀 Uso Local
+
+### Requisitos
+- Backend corriendo en http://localhost:3001
+- Navegador moderno (Chrome, Firefox, Safari, Edge)
+
+### Pasos
+
+1. **Clonar y acceder**
 ```bash
-# Clonar repositorio
 git clone https://github.com/Clavijo110/ecg_monitoring_interface.git
-cd ecg_web_node
+cd ecg_monitoring_interface
+```
 
-# Instalar dependencias
+2. **Iniciar backend** (en otra terminal)
+```bash
+# Ver: https://github.com/Clavijo110/ecg_monitoring_interface_backend
+# Clonar, instalar, y ejecutar:
 npm install
-
-# Ejecutar en desarrollo
-npm start
-# O ejecutar directamente
 node server.js
 ```
 
-La aplicación estará disponible en `http://localhost:3001`
-
-## Despliegue en Vercel + Render
-
-**IMPORTANTE:** Vercel es solo para el frontend (sitio estático). El backend con acceso a puertos seriales no puede ejecutarse en Vercel. Necesitas desplegar el backend en un servicio que soporte Node.js persistente.
-
-### Opción A: Frontend en Vercel + Backend en Render (RECOMENDADO)
-
-#### 1. Desplegar Frontend en Vercel
-
-1. Conecta tu repositorio de GitHub a Vercel
-2. En configuración de Vercel:
-   - **Framework**: None
-   - **Build Command**: (dejar vacío)
-   - **Output Directory**: `public`
-3. Deploy automático
-
-```bash
-# O desplegar manualmente
-vercel --prod
+3. **Abrir en navegador**
+```
+http://localhost:3001
 ```
 
-#### 2. Desplegar Backend en Render
+## 🌐 Despliegue en Vercel
 
-1. Ve a [render.com](https://render.com)
-2. Crea nuevo servicio "New Web Service"
-3. Conecta tu repositorio GitHub
+### Paso 1: Conectar a Vercel
+```
+1. Ve a https://vercel.com
+2. Click "New Project"
+3. Importa este repositorio (ecg_monitoring_interface)
 4. Configura:
-   - **Name**: ecg-monitoring-backend
-   - **Environment**: Node
-   - **Build Command**: `npm install`
-   - **Start Command**: `node server.js`
-   - **Plan**: Free tier está bien para pruebas
-5. Agregar variables de entorno si es necesario
-6. Deploy
-
-#### 3. Actualizar URL del Backend
-
-En `public/app.js`, reemplaza:
-```javascript
-const socket = io();
+   - Framework: Other (None)
+   - Output Directory: public
+   - Install Command: npm install --no-save
+5. Click "Deploy"
 ```
 
-Con:
+### Paso 2: Actualizar URL del Backend
+
+Edita `Public/app.js` línea ~229:
+
 ```javascript
-const backendURL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:3001' 
-  : 'https://tu-backend-en-render.onrender.com';
-const socket = io(backendURL);
+// Busca:
+return window.location.origin.includes('vercel.app') 
+  ? 'https://ecg-monitoring-backend.onrender.com'
+  : window.location.origin;
+
+// Reemplaza con tu URL real del backend en Render:
+return window.location.origin.includes('vercel.app') 
+  ? 'https://tu-backend-real.onrender.com'
+  : window.location.origin;
 ```
 
-### Opción B: Deploy Local + Exposición con Ngrok
-
-Si prefieres mantenerlo todo en tu máquina:
-
+### Paso 3: Push a GitHub
 ```bash
-# Terminal 1: Ejecutar backend localmente
-node server.js
-
-# Terminal 2: Exponer con ngrok
-ngrok http 3001
-
-# Copiar URL de ngrok (ej: https://xxxx-xxxx-xxx.ngrok.io)
-# Usar esa URL en app.js para el backend
+git add Public/app.js
+git commit -m "Update backend URL to Render"
+git push origin main
 ```
 
-### Opción C: Despliegue completo en otro servicio (Railway/Heroku)
+Vercel desplegará automáticamente.
 
-Para un flujo completo (frontend + backend juntos), considera:
-- [Railway.app](https://railway.app)
-- [Render.com](https://render.com)
+## 🔗 Componentes React
 
-Estos servicios soportan aplicaciones Node.js+Express completas.
+### App (Componente Principal)
+**Estados:**
+- `ports`, `selectedPort`, `connected`, `portName`, `statusMessage`
+- `derivada`, `bpm`, `mp`, `logs`, `lastEvent`
+- `mode` (manual/auto), `showECG`, `showMP`
 
-## Estructura del Proyecto
+**Funciones Clave:**
+- `loadPorts()` - Cargar puertos seriales disponibles
+- `connectPort()` - Conectar a un puerto
+- `sendCommand(cmd, label)` - Enviar comando al dispositivo
+- `toggleShowECG()`, `toggleShowMP()` - Toggle de señales (validado)
+- `refreshChart(point, mpPoint)` - Actualizar gráfico
+- `buildWavePoint(value)` - Generar puntos ECG
+- `buildMPPoint(active)` - Generar puntos marcapasos
+
+### Chart.js Setup
+- **Datasets**: 2 (ECG púrpura #8b5cf6, Marcapasos cyan #06b6d4)
+- **Puntos**: 42-point sliding window
+- **Updates**: Sin animación (mejor rendimiento)
+- **Rango Y**: 0.3 a 2.4
+
+## 🔌 API del Backend
+
+**Endpoints REST:**
+```
+GET  /api/ports              → Listar puertos seriales
+POST /api/connect            → Conectar a puerto
+GET  /api/status             → Estado de conexión
+POST /api/cmd                → Enviar comando
+```
+
+**WebSocket Events:**
+```
+← serial_status    → {connected: bool, port: string}
+← serial_data      → {tipo, derivada, bpm, mp, ...}
+← serial_tx        → {cmd: string}
+← serial_raw       → {raw: string}
+```
+
+## 🎨 Personalización
+
+### Cambiar colores
+Edita `Public/style.css` variables CSS:
+```css
+--surface: #0f172a;     /* Fondo */
+--accent: #7c3aed;      /* Color principal púrpura */
+--success: #22c55e;     /* Verde */
+--danger: #ef4444;      /* Rojo */
+```
+
+### Cambiar colores de gráfico
+En `Public/app.js`, busca la configuración de Chart.js:
+```javascript
+borderColor: "#8b5cf6",     // ECG
+borderColor: "#06b6d4",     // Marcapasos
+```
+
+## 🐛 Troubleshooting
+
+| Problema | Solución |
+|----------|----------|
+| "Cannot connect to backend" | Verifica URL en `app.js`, backend corriendo |
+| "404 NOT_FOUND en Vercel" | Asegúrate Output Dir = `public` |
+| "Gráfico no actualiza" | Abre F12 → Console, verifica Socket.io |
+| "Puerto serial no aparece" | Conecta dispositivo USB, click "Actualizar" |
+| "CommandError: No device found" | Dispositivo USB desconectado o sin permisos |
+
+## 📊 Despliegue Completo
+
+### Flujo Recomendado:
 
 ```
-ecg_web_node/
-├── server.js              # Backend Express con Socket.io
-├── package.json           # Dependencias
-├── vercel.json           # Configuración de Vercel
-├── .vercelignore         # Archivos a ignorar en Vercel
-└── Public/
-    ├── index.html        # HTML principal
-    ├── app.js            # Interfaz React
-    └── style.css         # Estilos modernos
+1. Push Backend a GitHub
+   ↓
+2. Deploy Backend en Render.com
+   ↓ (copiar URL)
+3. Actualizar Frontend con URL del Backend
+   ↓
+4. Push Frontend a GitHub
+   ↓
+5. Deploy Frontend en Vercel (auto)
 ```
 
-## Tecnologías
+**Resultado Final:**
+```
+┌─────────────────────────────────────┐
+│ https://tu-app.vercel.app           │ ← Frontend
+│ (React + Chart.js)                  │
+└──────────────┬──────────────────────┘
+               │ WebSocket
+               ↓
+┌──────────────────────────────────────┐
+│ https://tu-backend.onrender.com      │ ← Backend
+│ (Node.js + Socket.io + SerialPort)   │
+└──────────────────────────────────────┘
+```
 
-- **Backend**: Express.js, Socket.io, SerialPort
-- **Frontend**: React (CDN), Chart.js
-- **Hosting**: Vercel
-- **Estilos**: CSS vanilla con variables CSS
+## 📦 Repositorios Relacionados
 
-## API Endpoints
+- **Frontend (este)**: https://github.com/Clavijo110/ecg_monitoring_interface.git
+- **Backend**: https://github.com/Clavijo110/ecg_monitoring_interface_backend.git
 
-- `GET /api/ports` - Lista puertos seriales disponibles
-- `POST /api/connect` - Conectar a un puerto serial
-- `GET /api/status` - Obtener estado de conexión
-- `POST /api/cmd` - Enviar comando al ESP32
-
-## Eventos WebSocket
-
-- `serial_status` - Estado de conexión serial
-- `serial_data` - Datos del ECG en tiempo real
-- `serial_tx` - Comando transmitido
-- `serial_raw` - Datos crudos recibidos
-
-## Configuración de Puertos
-
-El servidor escucha en el puerto especificado por la variable de entorno `PORT`, o puerto `3001` por defecto.
-
-En Vercel, el puerto se asigna automáticamente y se almacena en `process.env.PORT`.
-
-## Licencia
+## 📝 Licencia
 
 MIT
 
-## Autor
+## 👤 Autor
 
 Alejandro Clavijo
