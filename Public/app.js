@@ -230,11 +230,8 @@ function App() {
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return 'http://localhost:3001';
       }
-      // Para producción: detecta Vercel y conecta a Render
-      // Reemplaza con tu URL real de Render: https://ecg-monitoring-interface-backend.onrender.com
-      return window.location.origin.includes('vercel.app') 
-        ? 'https://ecg-monitoring-interface-backend.onrender.com'
-        : window.location.origin;
+      // Para producción
+      return 'https://ecg-monitoring-interface-backend.onrender.com';
     };
     
     const socket = io(getBackendURL());

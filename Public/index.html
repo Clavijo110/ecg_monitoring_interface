@@ -15,9 +15,7 @@
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return 'http://localhost:3001';
       }
-      return window.location.origin.includes('vercel.app') 
-        ? 'https://ecg-monitoring-interface-backend.onrender.com'
-        : window.location.origin;
+      return 'https://ecg-monitoring-interface-backend.onrender.com';
     };
     
     const backendURL = getBackendURL();
