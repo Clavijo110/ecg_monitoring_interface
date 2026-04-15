@@ -231,9 +231,9 @@ function App() {
         return 'http://localhost:3001';
       }
       // Para producción: detecta Vercel y conecta a Render
-      // Reemplaza con tu URL real de Render: https://ecg-monitoring-backend.onrender.com
+      // Reemplaza con tu URL real de Render: https://ecg-monitoring-interface-backend.onrender.com
       return window.location.origin.includes('vercel.app') 
-        ? 'https://ecg-monitoring-backend.onrender.com'
+        ? 'https://ecg-monitoring-interface-backend.onrender.com'
         : window.location.origin;
     };
     
