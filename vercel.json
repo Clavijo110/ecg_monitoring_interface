@@ -1,0 +1,22 @@
+{
+  "buildCommand": "echo 'Frontend static deployment'",
+  "outputDirectory": "Public",
+  "installCommand": "npm install --no-save",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

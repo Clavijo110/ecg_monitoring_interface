@@ -98,7 +98,7 @@ git push origin main
 #### 3.2 Configurar Despliegue
 ```
 Framework:           Other (None)
-Output Directory:    public
+Output Directory:    Public
 Install Command:     npm install --no-save
 Build Command:       (dejar vacío)
 Environment:         (dejar por defecto)
