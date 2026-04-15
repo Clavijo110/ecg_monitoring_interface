@@ -63,7 +63,10 @@ function App() {
   const loadPorts = async () => {
     try {
       setStatus("Solicitando puertos seriales...");
-      const res = await fetch("/api/ports");
+      const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3001'
+        : 'https://ecg-monitoring-interface-backend.onrender.com';
+      const res = await fetch(`${backendUrl}/api/ports`);
       const data = await res.json();
 
       if (!data.ok) {
@@ -89,7 +92,10 @@ function App() {
 
     try {
       setStatus(`Conectando a ${selectedPort}...`);
-      const res = await fetch("/api/connect", {
+      const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3001'
+        : 'https://ecg-monitoring-interface-backend.onrender.com';
+      const res = await fetch(`${backendUrl}/api/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ portPath: selectedPort })
@@ -113,7 +119,10 @@ function App() {
 
   const checkStatus = async () => {
     try {
-      const res = await fetch("/api/status");
+      const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3001'
+        : 'https://ecg-monitoring-interface-backend.onrender.com';
+      const res = await fetch(`${backendUrl}/api/status`);
       const data = await res.json();
 
       if (data.connected) {
@@ -139,7 +148,10 @@ function App() {
 
     try {
       setStatus(`Enviando comando ${label}...`);
-      const res = await fetch("/api/cmd", {
+      const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3001'
+        : 'https://ecg-monitoring-interface-backend.onrender.com';
+      const res = await fetch(`${backendUrl}/api/cmd`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cmd })
