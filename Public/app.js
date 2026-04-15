@@ -1,5 +1,13 @@
 const { useState, useEffect, useRef } = React;
 
+// Helper: Detectar URL del backend (disponible globalmente)
+const getBackendURL = () => {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3001';
+  }
+  return 'https://ecg-monitoring-interface-backend.onrender.com';
+};
+
 function App() {
   const [ports, setPorts] = useState([]);
   const [selectedPort, setSelectedPort] = useState("");
@@ -236,16 +244,6 @@ function App() {
     loadPorts();
     checkStatus();
 
-    // Get backend URL from environment or auto-detect
-    const getBackendURL = () => {
-      // Para desarrollo local
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:3001';
-      }
-      // Para producción
-      return 'https://ecg-monitoring-interface-backend.onrender.com';
-    };
-    
     const socket = io(getBackendURL());
 
     socket.on("connect", () => {
