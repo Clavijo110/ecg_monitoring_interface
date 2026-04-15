@@ -36,26 +36,77 @@ node server.js
 
 La aplicación estará disponible en `http://localhost:3001`
 
-## Despliegue en Vercel
+## Despliegue en Vercel + Render
 
-### Opción 1: Deploy directo desde GitHub
+**IMPORTANTE:** Vercel es solo para el frontend (sitio estático). El backend con acceso a puertos seriales no puede ejecutarse en Vercel. Necesitas desplegar el backend en un servicio que soporte Node.js persistente.
 
-1. Conecta tu repositorio a Vercel
-2. Vercel detectará automáticamente la configuración de `vercel.json`
-3. El despliegue se realizará automáticamente
+### Opción A: Frontend en Vercel + Backend en Render (RECOMENDADO)
 
-### Opción 2: Deploy con CLI de Vercel
+#### 1. Desplegar Frontend en Vercel
+
+1. Conecta tu repositorio de GitHub a Vercel
+2. En configuración de Vercel:
+   - **Framework**: None
+   - **Build Command**: (dejar vacío)
+   - **Output Directory**: `public`
+3. Deploy automático
 
 ```bash
-# Instalar Vercel CLI
-npm i -g vercel
-
-# Desplegar
-vercel
-
-# Deploy en producción
+# O desplegar manualmente
 vercel --prod
 ```
+
+#### 2. Desplegar Backend en Render
+
+1. Ve a [render.com](https://render.com)
+2. Crea nuevo servicio "New Web Service"
+3. Conecta tu repositorio GitHub
+4. Configura:
+   - **Name**: ecg-monitoring-backend
+   - **Environment**: Node
+   - **Build Command**: `npm install`
+   - **Start Command**: `node server.js`
+   - **Plan**: Free tier está bien para pruebas
+5. Agregar variables de entorno si es necesario
+6. Deploy
+
+#### 3. Actualizar URL del Backend
+
+En `public/app.js`, reemplaza:
+```javascript
+const socket = io();
+```
+
+Con:
+```javascript
+const backendURL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:3001' 
+  : 'https://tu-backend-en-render.onrender.com';
+const socket = io(backendURL);
+```
+
+### Opción B: Deploy Local + Exposición con Ngrok
+
+Si prefieres mantenerlo todo en tu máquina:
+
+```bash
+# Terminal 1: Ejecutar backend localmente
+node server.js
+
+# Terminal 2: Exponer con ngrok
+ngrok http 3001
+
+# Copiar URL de ngrok (ej: https://xxxx-xxxx-xxx.ngrok.io)
+# Usar esa URL en app.js para el backend
+```
+
+### Opción C: Despliegue completo en otro servicio (Railway/Heroku)
+
+Para un flujo completo (frontend + backend juntos), considera:
+- [Railway.app](https://railway.app)
+- [Render.com](https://render.com)
+
+Estos servicios soportan aplicaciones Node.js+Express completas.
 
 ## Estructura del Proyecto
 

@@ -224,7 +224,20 @@ function App() {
     loadPorts();
     checkStatus();
 
-    const socket = io();
+    // Get backend URL from environment or auto-detect
+    const getBackendURL = () => {
+      // Para desarrollo local
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3001';
+      }
+      // Para producción: detecta Vercel y conecta a Render
+      // Reemplaza con tu URL real de Render: https://ecg-monitoring-backend.onrender.com
+      return window.location.origin.includes('vercel.app') 
+        ? 'https://ecg-monitoring-backend.onrender.com'
+        : window.location.origin;
+    };
+    
+    const socket = io(getBackendURL());
 
     socket.on("connect", () => {
       setStatus("Socket conectado");
