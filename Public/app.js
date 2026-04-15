@@ -359,7 +359,7 @@ function App() {
           "div",
           null,
           React.createElement("h1", null, "Interfaz de monitoreo ECG"),
-          React.createElement("p", { className: "subtitle" }, "Control intuitivo, feedback en tiempo real y una experiencia de usuario dise�ada para profesionales y proyectos avanzados.")
+          React.createElement("p", { className: "subtitle" }, "Control intuitivo, feedback en tiempo real y una experiencia de usuario diseñada para profesionales y proyectos avanzados.")
         )
       ),
       React.createElement(
