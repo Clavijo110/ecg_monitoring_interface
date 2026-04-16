@@ -4,19 +4,6 @@
   "env": {
     "NODE_ENV": "production"
   },
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
-{
-  "buildCommand": "echo 'Frontend static files'",
-  "outputDirectory": "Public",
-  "env": {
-    "NODE_ENV": "production"
-  },
   "headers": [
     {
       "source": "/(.*)",
