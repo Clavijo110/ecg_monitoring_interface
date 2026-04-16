@@ -402,7 +402,6 @@ function App() {
             React.createElement("div", { className: "metric-caption" }, "BPM en tiempo real")
           )
         )
-        )
       )
     ),
     React.createElement(
