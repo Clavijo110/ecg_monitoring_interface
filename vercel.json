@@ -1,7 +1,6 @@
 {
   "buildCommand": "npm --prefix ./frontend install",
   "outputDirectory": "./frontend/public",
-  "public": "./frontend/public",
   "rewrites": [
     {
       "source": "/(.*)",
