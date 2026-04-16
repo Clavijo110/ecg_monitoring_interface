@@ -1,101 +1,119 @@
 # 🏥 ECG Monitoring Interface - Monorepo
 
-Estructura separada y limpia para Frontend y Backend, optimizada para despliegue en Vercel (Frontend) y Render (Backend).
+Estructura separada para Frontend (Vercel) y Backend (Tu PC Local). **⚠️ IMPORTANTE: Arduino SOLO funciona con Backend en tu PC local**
+
+---
+
+## ⚡ La Configuración Que Funciona
+
+```
+┌─────────────────────────────────────┐
+│         TU PC LOCAL                 │
+│  ├─ Arduino (USB)                   │
+│  └─ Backend npm start (3001) ⚠️     │
+│     DEBE estar siempre corriendo    │
+└──────────────┬──────────────────────┘
+               │ WebSocket
+    ┌──────────▼──────────┐
+    │ VERCEL (Frontend)   │
+    │ https://app.vercel  │
+    └─────────────────────┘
+```
 
 ## 📁 Estructura
 
 ```
 ecg_monitoring_interface/
 ├── frontend/                           # 🌐 Frontend Application
-│   ├── public/                         # Archivos estáticos
-│   │   ├── index.html                 # HTML principal
-│   │   ├── app.js                     # Aplicación React
-│   │   ├── style.css                  # Estilos
-│   │   └── app.js.bak                 # Respaldo
-│   ├── package.json                    # Dependencias Frontend
-│   ├── README.md                       # Documentación Frontend
-│   ├── vercel.json                     # Config Vercel (copia)
-│   └── DEPLOYMENT_GUIDE.md             # Guía de despliegue
+│   ├── public/
+│   │   ├── index.html, app.js, style.css
+│   ├── package.json
+│   ├── vercel.json
+│   └── README.md
 │
-├── backend/                            # 🔧 Backend Reference
-│   └── README.md                       # Instrucciones Backend
+├── backend/                            # 🔧 Backend Reference (SEPARADO)
+│   └── README.md
 │
-├── vercel.json                         # ⚙️ Config Vercel (principal)
-├── .gitignore                          # Git ignore
-└── README.md                           # Este archivo
-
+├── SETUP_ARDUINO_VERCEL.md            # 👈 LEER PRIMERO
+├── ARDUINO_DEPLOYED.md                 # Explicación detallada
+├── ARDUINO_RENDER_ISSUE.md            # Por qué Render NO funciona
+├── vercel.json
+└── README.md
 ```
 
-## 🚀 Setup Rápido
+## 🚀 Setup en 3 Pasos
 
-### Frontend (Local Development)
-
-```bash
-cd frontend
-npm install
-python -m http.server 3000 --directory public
-# Abre: http://localhost:3000
-```
-
-### Backend (Local Development)
+### 1. Backend (Tu PC) - SIEMPRE ACTIVO
 
 ```bash
-cd ../ecg_monitoring_interface_backend
+# Clonar backend (repositorio SEPARADO)
+git clone https://github.com/Clavijo110/ecg_monitoring_interface_backend.git
+cd ecg_monitoring_interface_backend
+
+# Instalar y correr
 npm install
 npm start
-# Backend en: http://localhost:3001
+
+# ✅ Dejar esta terminal abierta mientras uses Arduino
+# Output: "Server running on http://localhost:3001"
 ```
 
-## 📦 Despliegue
+### 2. Frontend (Vercel) - Auto Deploy
 
-### Frontend → Vercel
 ```bash
-cd frontend
-vercel --prod
+# Solo push a GitHub (Vercel hace el resto automáticamente)
+git add .
+git commit -m "Deploying to Vercel"
+git push origin main
+
+# Vercel detecta cambios → Build → Deploy en ~60s
+# URL: https://tu-app.vercel.app
 ```
 
-El archivo `vercel.json` en la raíz apunta a `frontend/public` automáticamente.
+### 3. Arduino (Tu PC)
 
-### Backend → Render
-Ver: [backend/README.md](backend/README.md)
+```
+1. Conecta Arduino por USB
+2. Abre https://tu-app.vercel.app
+3. Selecciona puerto COM
+4. Click "Conectar"
+5. ✅ Datos en tiempo real
+```
 
-## 🔗 Repositorios
+## 📚 Documentación Importante
 
-- **Frontend (este repo)**: https://github.com/Clavijo110/ecg_monitoring_interface.git
+**👉 LEER PRIMERO:** [SETUP_ARDUINO_VERCEL.md](SETUP_ARDUINO_VERCEL.md)
+
+- [ARDUINO_DEPLOYED.md](ARDUINO_DEPLOYED.md) - Cómo funciona Arduino con Vercel
+- [ARDUINO_RENDER_ISSUE.md](ARDUINO_RENDER_ISSUE.md) - ¿Por qué NO funciona con Render?
+- [Frontend README](frontend/README.md) - Detalles Frontend
+- [Backend README](backend/README.md) - Detalles Backend
+
+## ⚠️ IMPORTANTE - Arduino Rules
+
+| Función | Ubicación | ¿Funciona? |
+|---------|-----------|-----------|
+| Arduino | Tu PC | ✅ Necesario |
+| Backend | Tu PC (localhost:3001) | ✅ Funciona |
+| Backend | Render Remote | ❌ Arduino muere |
+| Frontend | Vercel | ✅ Funciona |
+| Frontend | Tu PC | ✅ Funciona |
+
+**Regla de Oro:** Backend SIEMPRE en tu PC para Arduino
+
+## 🔗 Repositorios Separados
+
+- **Frontend**: https://github.com/Clavijo110/ecg_monitoring_interface.git
 - **Backend**: https://github.com/Clavijo110/ecg_monitoring_interface_backend.git
 
-## ✅ Ventajas de esta Estructura
+## 📋 Checklist para Empezar
 
-✓ **Separación clara** - Frontend y Backend en carpetas distintas  
-✓ **Sin conflictos** - Minimiza problemas en despliegue  
-✓ **Fácil mantenimiento** - Código organizado  
-✓ **Configuración automática** - Vercel y Render saben dónde buscar  
-✓ **Documentación** - Cada parte tiene instrucciones  
-
-## 📚 Documentación Completa
-
-- [Frontend README](frontend/README.md) - Guía Frontend completa
-- [Backend README](backend/README.md) - Instrucciones Backend
-- [Frontend DEPLOYMENT_GUIDE.md](frontend/DEPLOYMENT_GUIDE.md) - Despliegue detallado
-
-## 🛠️ Stack Técnico
-
-| Componente | Tecnología | Ubicación |
-|-----------|-----------|-----------|
-| Frontend | React 18 + Chart.js | `frontend/` |
-| Backend | Node.js + Express + Socket.io | Backend repo |
-| Database | Arduino Serial Port | Via Backend |
-| Deploy Frontend | Vercel | `vercel.json` (raíz) |
-| Deploy Backend | Render.com | Backend repo |
-
-## 📋 Checklist Inicial
-
-- [ ] Clone el repo
-- [ ] Copia la estructura localmente  
-- [ ] Backend corriendo en puerto 3001
-- [ ] Frontend corriendo en puerto 3000
-- [ ] Arduino conectado
-- [ ] Datos mostrando en tiempo real
+- [ ] Backend clonado y `npm start` corriendo
+- [ ] Frontend pushed a GitHub
+- [ ] Vercel URL creada (auto-deploy)
+- [ ] Arduino conectado por USB
+- [ ] Vercel muestra datos en tiempo real
+- [ ] Backend terminal SIEMPRE abierta mientras uses Arduino
 
 ## 🤝 Contribuir
 
