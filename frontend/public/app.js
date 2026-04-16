@@ -1,11 +1,10 @@
 const { useState, useEffect, useRef } = React;
 
-// Helper: Detectar URL del backend (disponible globalmente)
+// Helper: Detectar URL del backend
+// IMPORTANTE: Para Arduino, backend DEBE estar corriendo localmente
 const getBackendURL = () => {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:3001';
-  }
-  return 'https://ecg-monitoring-interface-backend.onrender.com';
+  // SIEMPRE intentar localhost primero (Arduino solo funciona local)
+  return 'http://localhost:3001';
 };
 
 function App() {

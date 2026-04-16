@@ -10,18 +10,14 @@
   <div id="root"></div>
 
   <script>
-    // Helper para detectar URL del backend
+    // Backend SIEMPRE en localhost para Arduino
     window.getBackendURL = () => {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:3001';
-      }
-      return 'https://ecg-monitoring-interface-backend.onrender.com';
+      return 'http://localhost:3001';
     };
 
-    // Información en la consola
     console.log('🏥 ECG Monitoring Interface v1.0.0');
-    console.log('📡 Backend:', window.getBackendURL());
-    console.log('💡 Nota: Sin Hardware ECG conectado, verá errores de puerto serial (esperado)');
+    console.log('📡 Backend esperado: http://localhost:3001');
+    console.log('⚠️  Si no ves datos: Verifica que backend está corriendo (npm start)');
   </script>
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
