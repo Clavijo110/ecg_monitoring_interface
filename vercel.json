@@ -11,21 +11,3 @@
     }
   ]
 }
-{
-  "buildCommand": "echo 'Frontend static files'",
-  "outputDirectory": "Public",
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=3600"
-        }
-      ]
-    }
-  ]
-}
