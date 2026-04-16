@@ -1,9 +1,7 @@
 {
-  "buildCommand": "echo 'Frontend static files'",
-  "outputDirectory": "frontend/public",
-  "env": {
-    "NODE_ENV": "production"
-  },
+  "buildCommand": "npm --prefix ./frontend install",
+  "outputDirectory": "./frontend/public",
+  "public": "./frontend/public",
   "rewrites": [
     {
       "source": "/(.*)",
