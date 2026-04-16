@@ -1,21 +1,19 @@
-# 🚀 Arduino + Despliegue Remoto = Funciona
+# 🚀 Arduino + Despliegue Remoto = Funciona (Con Limitaciones)
 
-## 🎯 Arquitectura Correcta
+## ⚠️ IMPORTANTE: Backend DEBE estar Local
 
 ```
-LOCAL PC:
-  Arduino (COM3) 
-    ↓ USB Serial
-  Backend Node.js (node server.js)
-    Puerto 3001
-    ↓ WebSocket
+❌ ESTO NO FUNCIONA:
+Arduino → Backend en Render (Remoto)
 
-REMOTO (Vercel):
-  Frontend React
-    http://localhost:3001 ← Conecta aquí
-    ↓
-Navegador del Usuario
+✅ ESTO FUNCIONA:
+Arduino → Backend Local (:3001)
+
+El Arduino DEBE conectarse a un backend en tu PC.
+Un backend remoto no puede acceder al USB de tu PC.
 ```
+
+**Ver:** [ARDUINO_RENDER_ISSUE.md](ARDUINO_RENDER_ISSUE.md) - Explicación detallada
 
 ## ⚡ Cómo Funciona
 

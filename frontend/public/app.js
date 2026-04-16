@@ -19,16 +19,13 @@ function App() {
   const [statusMessage, setStatusMessage] = useState("Cargando estado...");
   const [derivada, setDerivada] = useState("---");
   const [bpm, setBpm] = useState("---");
-  const [mp, setMp] = useState(false);
   const [logs, setLogs] = useState([]);
   const [lastEvent, setLastEvent] = useState("Sin eventos recientes");
   const [mode, setMode] = useState("manual");
   const [showECG, setShowECG] = useState(true);
-  const [showMP, setShowMP] = useState(true);
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const waveIndex = useRef(0);
-  const mpIndex = useRef(0);
 
   const timestamp = () => new Date().toLocaleTimeString("es-ES", { hour12: false });
 
@@ -50,23 +47,12 @@ function App() {
     return 1.1 + Math.sin(phase) * 0.55 + (normalized / 180) * 0.35 + (Math.random() - 0.5) * 0.08;
   };
 
-  const buildMPPoint = (active) => {
-    const phase = mpIndex.current * 0.38;
-    mpIndex.current += 1;
-    const base = active ? 1.8 + Math.sin(phase) * 0.35 : 0.5;
-    return base + (Math.random() - 0.5) * 0.06;
-  };
-
-  const refreshChart = (point, mpPoint) => {
+  const refreshChart = (point) => {
     if (!chartInstance.current) return;
     const chart = chartInstance.current;
     if (showECG) {
       chart.data.datasets[0].data.push(point);
       chart.data.datasets[0].data.shift();
-    }
-    if (showMP) {
-      chart.data.datasets[1].data.push(mpPoint);
-      chart.data.datasets[1].data.shift();
     }
     chart.update("none");
   };
@@ -174,13 +160,7 @@ function App() {
   };
 
   const toggleShowECG = () => {
-    if (showECG && !showMP) return;
     setShowECG(!showECG);
-  };
-
-  const toggleShowMP = () => {
-    if (showMP && !showECG) return;
-    setShowMP(!showMP);
   };
 
   useEffect(() => {
@@ -200,16 +180,6 @@ function App() {
             tension: 0.4,
             pointRadius: 0,
             fill: true
-          },
-          {
-            label: "Marcapasos",
-            data: Array.from({ length: 42 }, () => 0.5),
-            borderColor: "#06b6d4",
-            backgroundColor: "rgba(6, 182, 212, 0.12)",
-            borderWidth: 2.5,
-            tension: 0.4,
-            pointRadius: 0,
-            fill: false
           }
         ]
       },
@@ -282,9 +252,8 @@ function App() {
       if (data.tipo === "DATA") {
         setDerivada(data.derivada || "---");
         setBpm(Number(data.bpm).toFixed(1));
-        setMp(data.mp === 1);
         setLastEvent(`Datos actualizados`);
-        refreshChart(buildWavePoint(data.bpm), buildMPPoint(data.mp === 1));
+        refreshChart(buildWavePoint(data.bpm));
       }
 
       if (data.tipo === "ACK_DERIVADA") {
@@ -318,11 +287,6 @@ function App() {
         setMode("manual");
         setStatus("Modo manual");
         setLastEvent("Manual activado");
-      }
-
-      if (data.tipo === "EVENT_MP") {
-        setMp(true);
-        setLastEvent("Evento marcapasos detectado");
       }
 
       if (data.tipo === "READY") {
@@ -436,14 +400,8 @@ function App() {
             React.createElement("h3", null, "Ritmo cardiaco"),
             React.createElement("p", null, bpm),
             React.createElement("div", { className: "metric-caption" }, "BPM en tiempo real")
-          ),
-          React.createElement(
-            "div",
-            { className: "metric-card" },
-            React.createElement("h3", null, "Marcapasos"),
-            React.createElement("p", null, mp ? "Si" : "No"),
-            React.createElement("div", { className: "metric-caption" }, mp ? "Detectado" : "Sin actividad")
           )
+        )
         )
       )
     ),
@@ -502,7 +460,7 @@ function App() {
             "div",
             null,
             React.createElement("h2", null, "Pulso en tiempo real"),
-            React.createElement("p", null, "Visualiza ECG y marcapasos. Activa/desactiva las senales.")
+            React.createElement("p", null, "Visualiza ECG en tiempo real.")
           ),
           React.createElement(
             "div",
@@ -520,14 +478,6 @@ function App() {
               onClick: toggleShowECG
             },
             showECG ? "[ON] ECG" : "ECG"
-          ),
-          React.createElement(
-            "button",
-            {
-              className: "btn btn-signal " + (showMP ? "signal-active" : "signal-inactive"),
-              onClick: toggleShowMP
-            },
-            showMP ? "[ON] Marcapasos" : "Marcapasos"
           )
         ),
         React.createElement("canvas", { ref: chartRef, height: 260 })
