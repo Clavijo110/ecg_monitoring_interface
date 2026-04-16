@@ -1,0 +1,13 @@
+{
+  "name": "ecg-monitoring-monorepo",
+  "version": "1.0.0",
+  "description": "ECG Monitoring Interface - Monorepo (Frontend & Backend)",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm --prefix ./frontend install",
+    "start": "npm --prefix ./frontend start"
+  }
+}

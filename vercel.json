@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm --prefix ./frontend install",
+  "buildCommand": "echo 'Static frontend build'",
   "outputDirectory": "./frontend/public",
   "rewrites": [
     {
