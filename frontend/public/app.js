@@ -1,9 +1,13 @@
 const { useState, useEffect, useRef } = React;
 
 // Helper: Detectar URL del backend
-// IMPORTANTE: Para Arduino, backend DEBE estar corriendo localmente
+// ⚠️ IMPORTANTE: ARDUINO SOLO FUNCIONA CON BACKEND LOCAL
+// Backend DEBE estar en http://localhost:3001 para que Arduino funcione
+// Si cambias a backend remoto (Render), Arduino NO funcionará
 const getBackendURL = () => {
-  // SIEMPRE intentar localhost primero (Arduino solo funciona local)
+  // Arduino requiere backend en localhost
+  // NUNCA cambies esto a un servidor remoto (Render, Heroku, etc)
+  // Si necesitas backend remoto, ver ARDUINO_DEPLOYED.md
   return 'http://localhost:3001';
 };
 
@@ -70,9 +74,7 @@ function App() {
   const loadPorts = async () => {
     try {
       setStatus("Solicitando puertos seriales...");
-      const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:3001'
-        : 'https://ecg-monitoring-interface-backend.onrender.com';
+      const backendUrl = getBackendURL(); // Siempre localhost:3001 para Arduino
       const res = await fetch(`${backendUrl}/api/ports`);
       const data = await res.json();
 
@@ -99,9 +101,7 @@ function App() {
 
     try {
       setStatus(`Conectando a ${selectedPort}...`);
-      const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:3001'
-        : 'https://ecg-monitoring-interface-backend.onrender.com';
+      const backendUrl = getBackendURL(); // Siempre localhost:3001 para Arduino
       const res = await fetch(`${backendUrl}/api/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,9 +126,7 @@ function App() {
 
   const checkStatus = async () => {
     try {
-      const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:3001'
-        : 'https://ecg-monitoring-interface-backend.onrender.com';
+      const backendUrl = getBackendURL(); // Siempre localhost:3001 para Arduino
       const res = await fetch(`${backendUrl}/api/status`);
       const data = await res.json();
 
@@ -155,9 +153,7 @@ function App() {
 
     try {
       setStatus(`Enviando comando ${label}...`);
-      const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:3001'
-        : 'https://ecg-monitoring-interface-backend.onrender.com';
+      const backendUrl = getBackendURL(); // Siempre localhost:3001 para Arduino
       const res = await fetch(`${backendUrl}/api/cmd`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
