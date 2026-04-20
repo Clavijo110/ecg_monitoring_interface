@@ -23,9 +23,11 @@ function App() {
   const [lastEvent, setLastEvent] = useState("Sin eventos recientes");
   const [mode, setMode] = useState("manual");
   const [showECG, setShowECG] = useState(true);
+  const [hasRealData, setHasRealData] = useState(false);
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const waveIndex = useRef(0);
+  const lastDataTime = useRef(0);
 
   const timestamp = () => new Date().toLocaleTimeString("es-ES", { hour12: false });
 
@@ -40,8 +42,15 @@ function App() {
     addLog(message);
   };
 
-  const buildWavePoint = (value) => {
-    const normalized = Math.min(Math.max(Number(value) || 0, 20), 180);
+  const buildWavePoint = (ecgValue, bpmValue) => {
+    // Si tenemos valor ECG real del ESP32, usarlo directamente
+    if (ecgValue !== undefined && ecgValue !== null) {
+      // Normalizar valor ADC (0-4095) a rango de gráfica (0-2)
+      return (ecgValue / 4095) * 2.0;
+    }
+
+    // Si no hay datos reales, generar señal simulada basada en BPM
+    const normalized = Math.min(Math.max(Number(bpmValue) || 72, 20), 180);
     const phase = waveIndex.current * 0.45;
     waveIndex.current += 1;
     return 1.1 + Math.sin(phase) * 0.55 + (normalized / 180) * 0.35 + (Math.random() - 0.5) * 0.08;
@@ -51,7 +60,9 @@ function App() {
     if (!chartInstance.current) return;
     const chart = chartInstance.current;
     if (showECG) {
-      chart.data.datasets[0].data.push(point);
+      // Si no hay datos reales, mostrar línea plana
+      const valueToAdd = hasRealData ? point : 1.0;
+      chart.data.datasets[0].data.push(valueToAdd);
       chart.data.datasets[0].data.shift();
     }
     chart.update("none");
@@ -249,11 +260,13 @@ function App() {
     });
 
     socket.on("serial_data", (data) => {
-      if (data.tipo === "DATA") {
+      if (data.tipo === "DATA" || data.tipo === "REAL_DATA") {
         setDerivada(data.derivada || "---");
         setBpm(Number(data.bpm).toFixed(1));
         setLastEvent(`Datos actualizados`);
-        refreshChart(buildWavePoint(data.bpm));
+        setHasRealData(true);
+        lastDataTime.current = Date.now();
+        refreshChart(buildWavePoint(data.ecg, data.bpm));
       }
 
       if (data.tipo === "ACK_DERIVADA") {
@@ -303,6 +316,25 @@ function App() {
 
     return () => socket.disconnect();
   }, []);
+
+  // Limpiar datos antiguos cuando no llegan por más de 5 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (hasRealData && now - lastDataTime.current > 5000) {
+        setHasRealData(false);
+        setDerivada("---");
+        setBpm("---");
+        setLastEvent("Sin señal - ESP32 desconectado");
+        addLog("Señal perdida - ESP32 desconectado", "warn");
+      } else if (!hasRealData && showECG) {
+        // Generar punto plano cuando no hay señal
+        refreshChart(1.0);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [hasRealData, showECG]);
 
   return React.createElement(
     "div",
