@@ -33,8 +33,12 @@ function App() {
 
   const addLog = (message, variant = "info") => {
     const line = `[${timestamp()}] ${message}`;
-    setLogs((current) => [...current.slice(-99), line]);
-    console[variant] ? console[variant](message) : console.log(message);
+    // Limitar logs a máximo 50 líneas en vez de 100 para economizar memoria
+    setLogs((current) => [...current.slice(-49), line]);
+    // Solo log importante a consola, no todo
+    if (variant === "error" || variant === "warn") {
+      console[variant](message);
+    }
   };
 
   const setStatus = (message) => {
@@ -252,11 +256,16 @@ function App() {
     });
 
     socket.on("serial_tx", (data) => {
-      addLog(`TX -> ${data.cmd}`);
+      // Solo log de comandos significativos (no de datos), para evitar sobrecargar
+      if (data.cmd && data.cmd.length < 2) {
+        // Log solo de comandos cortos (a, m, e, s, etc.)
+        // Sin logs para datos continuos
+      }
     });
 
     socket.on("serial_raw", (data) => {
-      addLog(`RX raw -> ${data.raw}`);
+      // Deshabilitado: causaba sobrecarga con ~250 líneas/segundo
+      // Para debugging, usar DevTools y revisar network tab
     });
 
     socket.on("serial_data", (data) => {
