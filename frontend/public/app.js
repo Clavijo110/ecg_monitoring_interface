@@ -54,17 +54,19 @@ function App() {
   const ADC_MAX_VOLT = 3.3;
 
   const buildWavePoint = (ecgValue, bpmValue, derivadaName) => {
-    // Si tenemos valor ECG real del ESP32, convertir ADC->V y devolver
+    // Si tenemos valor ECG real del ESP32, convertir ADC->V y centrar en 0, devolver mV
     if (ecgValue !== undefined && ecgValue !== null) {
       const v = (Number(ecgValue) / 4095) * ADC_MAX_VOLT;
-      return v;
+      const centered = v - ADC_MAX_VOLT / 2.0; // bipolar around 0
+      return centered * 1000.0; // return mV
     }
 
-    // Si no hay datos reales, generar señal simulada basada en BPM (fallback)
+    // Si no hay datos reales, generar señal simulada basada en BPM (fallback, mV)
     const normalized = Math.min(Math.max(Number(bpmValue) || 72, 20), 180);
     const phase = waveIndex.current * 0.45;
     waveIndex.current += 1;
-    return 1.65 + Math.sin(phase) * 0.55 + (normalized / 180) * 0.35 + (Math.random() - 0.5) * 0.08;
+    const simV = 1.65 + Math.sin(phase) * 0.55 + (normalized / 180) * 0.35 + (Math.random() - 0.5) * 0.08;
+    return (simV - ADC_MAX_VOLT / 2.0) * 1000.0; // mV
   };
 
   const refreshChart = (point) => {
@@ -195,7 +197,7 @@ function App() {
         datasets: [
           {
             label: "ECG en vivo",
-            data: Array.from({ length: 42 }, () => 1.65),
+            data: Array.from({ length: 42 }, () => 0),
             borderColor: "#8b5cf6",
             backgroundColor: "rgba(124, 58, 237, 0.18)",
             borderWidth: 2.5,
@@ -217,9 +219,9 @@ function App() {
           x: { display: false },
           y: {
             display: true,
-            min: 0,
-            max: ADC_MAX_VOLT,
-            ticks: { display: false },
+            min: -1200,
+            max: 1200,
+            ticks: { display: true, callback: (v) => `${v} mV` },
             grid: { color: "rgba(148,163,184,0.12)" }
           }
         }
@@ -280,11 +282,12 @@ function App() {
         lastDataTime.current = Date.now();
         // Update chart scale based on derivada expected amplitude
         try {
-          const pp = DERIVADA_PP[deriv] || 2.0; // default 2Vpp
+          // Convert expected peak-to-peak (V) to mV and set bipolar range
+          const pp = (DERIVADA_PP[deriv] || 2.0) * 1000.0; // mV
           const half = pp / 2.0;
-          const center = ADC_MAX_VOLT / 2.0;
-          const yMin = Math.max(0, center - half - 0.05);
-          const yMax = Math.min(ADC_MAX_VOLT, center + half + 0.05);
+          const margin = 100; // mV padding
+          const yMin = -half - margin;
+          const yMax = half + margin;
           if (chartInstance.current) {
             chartInstance.current.options.scales.y.min = yMin;
             chartInstance.current.options.scales.y.max = yMax;
