@@ -33,12 +33,8 @@ function App() {
 
   const addLog = (message, variant = "info") => {
     const line = `[${timestamp()}] ${message}`;
-    // Limitar logs a máximo 50 líneas en vez de 100 para economizar memoria
-    setLogs((current) => [...current.slice(-49), line]);
-    // Solo log importante a consola, no todo
-    if (variant === "error" || variant === "warn") {
-      console[variant](message);
-    }
+    setLogs((current) => [...current.slice(-99), line]);
+    console[variant] ? console[variant](message) : console.log(message);
   };
 
   const setStatus = (message) => {
@@ -46,18 +42,29 @@ function App() {
     addLog(message);
   };
 
-  const buildWavePoint = (ecgValue, bpmValue) => {
-    // Si tenemos valor ECG real del ESP32, usarlo directamente
+  const DERIVADA_PP = {
+    "I": 0.25,
+    "II": 2.0,
+    "III": 0.6,
+    "aVR": 0.9,
+    "aVL": 0.95,
+    "aVF": 1.15
+  };
+
+  const ADC_MAX_VOLT = 3.3;
+
+  const buildWavePoint = (ecgValue, bpmValue, derivadaName) => {
+    // Si tenemos valor ECG real del ESP32, convertir ADC->V y devolver
     if (ecgValue !== undefined && ecgValue !== null) {
-      // Normalizar valor ADC (0-4095) a rango de gráfica (0-2)
-      return (ecgValue / 4095) * 2.0;
+      const v = (Number(ecgValue) / 4095) * ADC_MAX_VOLT;
+      return v;
     }
 
-    // Si no hay datos reales, generar señal simulada basada en BPM
+    // Si no hay datos reales, generar señal simulada basada en BPM (fallback)
     const normalized = Math.min(Math.max(Number(bpmValue) || 72, 20), 180);
     const phase = waveIndex.current * 0.45;
     waveIndex.current += 1;
-    return 1.1 + Math.sin(phase) * 0.55 + (normalized / 180) * 0.35 + (Math.random() - 0.5) * 0.08;
+    return 1.65 + Math.sin(phase) * 0.55 + (normalized / 180) * 0.35 + (Math.random() - 0.5) * 0.08;
   };
 
   const refreshChart = (point) => {
@@ -183,12 +190,12 @@ function App() {
     const ctx = chartRef.current.getContext("2d");
     chartInstance.current = new Chart(ctx, {
       type: "line",
-      data: {
+            data: {
         labels: Array.from({ length: 42 }, () => ""),
         datasets: [
           {
             label: "ECG en vivo",
-            data: Array.from({ length: 42 }, () => 1),
+            data: Array.from({ length: 42 }, () => 1.65),
             borderColor: "#8b5cf6",
             backgroundColor: "rgba(124, 58, 237, 0.18)",
             borderWidth: 2.5,
@@ -210,8 +217,8 @@ function App() {
           x: { display: false },
           y: {
             display: true,
-            min: 0.3,
-            max: 2.4,
+            min: 0,
+            max: ADC_MAX_VOLT,
             ticks: { display: false },
             grid: { color: "rgba(148,163,184,0.12)" }
           }
@@ -256,26 +263,38 @@ function App() {
     });
 
     socket.on("serial_tx", (data) => {
-      // Solo log de comandos significativos (no de datos), para evitar sobrecargar
-      if (data.cmd && data.cmd.length < 2) {
-        // Log solo de comandos cortos (a, m, e, s, etc.)
-        // Sin logs para datos continuos
-      }
+      addLog(`TX -> ${data.cmd}`);
     });
 
     socket.on("serial_raw", (data) => {
-      // Deshabilitado: causaba sobrecarga con ~250 líneas/segundo
-      // Para debugging, usar DevTools y revisar network tab
+      addLog(`RX raw -> ${data.raw}`);
     });
 
     socket.on("serial_data", (data) => {
       if (data.tipo === "DATA" || data.tipo === "REAL_DATA") {
-        setDerivada(data.derivada || "---");
+        const deriv = data.derivada || "---";
+        setDerivada(deriv);
         setBpm(Number(data.bpm).toFixed(1));
         setLastEvent(`Datos actualizados`);
         setHasRealData(true);
         lastDataTime.current = Date.now();
-        refreshChart(buildWavePoint(data.ecg, data.bpm));
+        // Update chart scale based on derivada expected amplitude
+        try {
+          const pp = DERIVADA_PP[deriv] || 2.0; // default 2Vpp
+          const half = pp / 2.0;
+          const center = ADC_MAX_VOLT / 2.0;
+          const yMin = Math.max(0, center - half - 0.05);
+          const yMax = Math.min(ADC_MAX_VOLT, center + half + 0.05);
+          if (chartInstance.current) {
+            chartInstance.current.options.scales.y.min = yMin;
+            chartInstance.current.options.scales.y.max = yMax;
+            chartInstance.current.update("none");
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        refreshChart(buildWavePoint(data.ecg, data.bpm, deriv));
       }
 
       if (data.tipo === "ACK_DERIVADA") {
