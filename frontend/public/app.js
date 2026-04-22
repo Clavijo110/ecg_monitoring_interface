@@ -1,5 +1,6 @@
 const { useState, useEffect, useRef } = React;
 
+// Backend local para Arduino
 const getBackendURL = () => {
   return "http://localhost:3001";
 };
@@ -23,8 +24,8 @@ function App() {
   const chartNeedsUpdate = useRef(false);
   const lastDataTime = useRef(0);
 
-  // Si el ESP32 manda DATA cada 2 muestras y toma a 250 Hz,
-  // al frontend llegan aprox 125 muestras/seg
+  // ESP32 manda DATA cada 2 muestras; si internamente toma a 250 Hz,
+  // al frontend llegan ~125 muestras/seg.
   const DISPLAY_FS = 125;
   const WINDOW_SECONDS = 5;
   const BUFFER_SIZE = DISPLAY_FS * WINDOW_SECONDS;
@@ -217,12 +218,6 @@ function App() {
   useEffect(() => {
     if (!chartRef.current) return;
 
-    if (typeof Chart === "undefined") {
-      addLog("Chart.js no está cargado en index.html", "error");
-      setStatus("Falta Chart.js");
-      return;
-    }
-
     const ctx = chartRef.current.getContext("2d");
 
     chartInstance.current = new Chart(ctx, {
@@ -233,8 +228,8 @@ function App() {
           {
             label: "ECG en vivo",
             data: Array.from({ length: BUFFER_SIZE }, () => 0),
-            borderColor: "#00ff88",
-            backgroundColor: "rgba(0, 255, 136, 0.05)",
+            borderColor: "#8b5cf6",
+            backgroundColor: "rgba(124, 58, 237, 0.08)",
             borderWidth: 2,
             tension: 0,
             pointRadius: 0,
@@ -308,8 +303,11 @@ function App() {
     let socket = null;
 
     if (typeof io === "undefined") {
-      addLog("Socket.io no está cargado en index.html", "error");
-      setStatus("Falta Socket.io");
+      addLog(
+        "Cliente Socket.io no está disponible en la página. No se podrá recibir datos en tiempo real.",
+        "warn"
+      );
+      setStatus("Socket cliente no disponible");
     } else {
       try {
         socket = io(getBackendURL(), socketConfig);
@@ -338,9 +336,12 @@ function App() {
           addLog(`TX -> ${data.cmd}`);
         });
 
-        // No loguear cada DATA para no congelar la interfaz
+        // No loguear cada raw porque atrasa la UI.
         socket.on("serial_raw", (data) => {
-          if (typeof data.raw === "string" && !data.raw.startsWith("DATA,")) {
+          if (
+            typeof data.raw === "string" &&
+            !data.raw.startsWith("DATA,")
+          ) {
             addLog(`RX raw -> ${data.raw}`);
           }
         });
@@ -423,7 +424,7 @@ function App() {
     };
   }, []);
 
-  // Si se pierde la señal real, limpiar estado
+  // Si se pierde la señal real, limpiar estado pero NO meter señal falsa
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -468,7 +469,6 @@ function App() {
         connected ? `Conectado a ${portName}` : "Desconectado"
       )
     ),
-
     React.createElement(
       "div",
       { className: "grid-surface" },
@@ -507,13 +507,24 @@ function App() {
           React.createElement(
             "div",
             { className: "button-row" },
-            React.createElement("button", { className: "btn btn-secondary", onClick: loadPorts }, "Actualizar puertos"),
-            React.createElement("button", { className: "btn btn-primary", onClick: connectPort }, "Conectar"),
-            React.createElement("button", { className: "btn btn-soft", onClick: checkStatus }, "Ver estado")
+            React.createElement(
+              "button",
+              { className: "btn btn-secondary", onClick: loadPorts },
+              "Actualizar puertos"
+            ),
+            React.createElement(
+              "button",
+              { className: "btn btn-primary", onClick: connectPort },
+              "Conectar"
+            ),
+            React.createElement(
+              "button",
+              { className: "btn btn-soft", onClick: checkStatus },
+              "Ver estado"
+            )
           )
         )
       ),
-
       React.createElement(
         "div",
         { className: "card" },
@@ -530,24 +541,30 @@ function App() {
             "div",
             { className: "metric-card" },
             React.createElement("h3", null, "Estado"),
-            React.createElement("p", { className: "metric-highlight" }, statusMessage)
+            React.createElement("p", { className: "metric-highlight" }, statusMessage),
+            React.createElement(
+              "div",
+              { className: "metric-caption" },
+              connected ? "Comunicación estable" : "No hay conexión activa"
+            )
           ),
           React.createElement(
             "div",
             { className: "metric-card" },
             React.createElement("h3", null, "Derivada activa"),
-            React.createElement("p", null, derivada)
+            React.createElement("p", null, derivada),
+            React.createElement("div", { className: "metric-caption" }, "Línea de ECG seleccionada")
           ),
           React.createElement(
             "div",
             { className: "metric-card" },
             React.createElement("h3", null, "Ritmo cardiaco"),
-            React.createElement("p", null, bpm)
+            React.createElement("p", null, bpm),
+            React.createElement("div", { className: "metric-caption" }, "BPM en tiempo real")
           )
         )
       )
     ),
-
     React.createElement(
       "div",
       { className: "grid-surface" },
@@ -558,7 +575,7 @@ function App() {
           "div",
           { className: "section-title" },
           React.createElement("h2", null, "Controles rápidos"),
-          React.createElement("p", null, "Acciones directas para tu ECG.")
+          React.createElement("p", null, "Acciones directas para tu ECG y modos de operación.")
         ),
         React.createElement(
           "div",
@@ -566,20 +583,81 @@ function App() {
           React.createElement(
             "div",
             { className: "button-row" },
-            React.createElement("button", { className: "btn btn-primary", onClick: () => sendCommand("e", "Iniciar ECG"), disabled: !connected }, "Iniciar ECG"),
-            React.createElement("button", { className: "btn btn-danger", onClick: () => sendCommand("s", "Detener ECG"), disabled: !connected }, "Detener ECG"),
-            React.createElement("button", { className: "btn btn-accent", onClick: () => sendCommand("a", "Modo Auto"), disabled: !connected }, "Modo Auto")
+            React.createElement(
+              "button",
+              { className: "btn btn-primary", onClick: () => sendCommand("e", "Iniciar ECG"), disabled: !connected },
+              "Iniciar ECG"
+            ),
+            React.createElement(
+              "button",
+              { className: "btn btn-danger", onClick: () => sendCommand("s", "Detener ECG"), disabled: !connected },
+              "Detener ECG"
+            ),
+            React.createElement(
+              "button",
+              { className: "btn btn-accent", onClick: () => sendCommand("a", "Modo Auto"), disabled: !connected },
+              "Modo Auto"
+            )
           ),
           React.createElement(
             "div",
             { className: "button-row" },
-            React.createElement("button", { className: "btn btn-secondary", onClick: () => sendCommand("m", "Modo Manual"), disabled: !connected }, "Modo Manual"),
-            React.createElement("button", { className: "btn btn-soft", onClick: () => sendCommand("1", "Derivada 1"), disabled: !connected }, "Derivada 1"),
-            React.createElement("button", { className: "btn btn-soft", onClick: () => sendCommand("2", "Derivada 2"), disabled: !connected }, "Derivada 2")
+            React.createElement(
+              "button",
+              { className: "btn btn-secondary", onClick: () => sendCommand("m", "Modo Manual"), disabled: !connected },
+              "Modo Manual"
+            ),
+            React.createElement(
+              "button",
+              { className: "btn btn-soft", onClick: () => sendCommand("1", "Derivada 1"), disabled: !connected },
+              "Derivada 1"
+            ),
+            React.createElement(
+              "button",
+              { className: "btn btn-soft", onClick: () => sendCommand("2", "Derivada 2"), disabled: !connected },
+              "Derivada 2"
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "button-row" },
+            React.createElement(
+              "button",
+              { className: "btn btn-soft", onClick: () => sendCommand("3", "Derivada 3"), disabled: !connected },
+              "Derivada 3"
+            ),
+            React.createElement(
+              "button",
+              { className: "btn btn-soft", onClick: () => sendCommand("4", "Derivada 4"), disabled: !connected },
+              "Derivada 4"
+            ),
+            React.createElement(
+              "button",
+              { className: "btn btn-soft", onClick: () => sendCommand("5", "Derivada 5"), disabled: !connected },
+              "Derivada 5"
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "button-row" },
+            React.createElement(
+              "button",
+              { className: "btn btn-soft", onClick: () => sendCommand("6", "Derivada 6"), disabled: !connected },
+              "Derivada 6"
+            ),
+            React.createElement(
+              "button",
+              { className: "btn btn-secondary", onClick: () => setStatus(`Último evento: ${lastEvent}`) },
+              "Actualizar panel"
+            ),
+            React.createElement(
+              "button",
+              { className: "btn btn-secondary", disabled: true },
+              mode === "auto" ? "Activo: automático" : "Activo: manual"
+            )
           )
         )
       ),
-
       React.createElement(
         "div",
         { className: "card chart-card" },
@@ -613,7 +691,6 @@ function App() {
         React.createElement("canvas", { ref: chartRef, width: 800, height: 260 })
       )
     ),
-
     React.createElement(
       "div",
       { className: "grid-surface" },
@@ -624,7 +701,7 @@ function App() {
           "div",
           { className: "section-title" },
           React.createElement("h2", null, "Actividad del sistema"),
-          React.createElement("p", null, "Registro de eventos recientes.")
+          React.createElement("p", null, "Registro de eventos recientes y respuestas del dispositivo.")
         ),
         React.createElement(
           "div",
