@@ -213,6 +213,11 @@ function App() {
 
   useEffect(() => {
     if (!chartRef.current) return;
+    if (typeof Chart === "undefined") {
+      addLog("Chart.js no está cargado en index.html", "error");
+      setStatus("Falta Chart.js");
+      return;
+    }
 
     const ctx = chartRef.current.getContext("2d");
 
@@ -295,114 +300,88 @@ function App() {
     let socket = null;
 
     if (typeof io === "undefined") {
-      addLog(
-        "Cliente Socket.io no está disponible en la página. No se podrá recibir datos en tiempo real.",
-        "warn"
-      );
-      setStatus("Socket cliente no disponible");
+      addLog("Socket.io no está cargado en index.html", "error");
+      setStatus("Falta Socket.io");
     } else {
-      try {
-        socket = io(getBackendURL(), socketConfig);
+      socket = io(getBackendURL(), socketConfig);
 
-        socket.on("connect", () => {
-          setStatus("✅ Socket conectado");
-          addLog("Socket.io conectado");
-        });
+      socket.on("connect", () => {
+        setStatus("✅ Socket conectado");
+        addLog("Socket.io conectado");
+      });
 
-        socket.on("connect_error", (error) => {
-          addLog(`Error al conectar Socket.io: ${error.message}`, "error");
-          setStatus("Error conectando a backend");
-        });
+      socket.on("connect_error", (error) => {
+        addLog(`Error al conectar Socket.io: ${error.message}`, "error");
+        setStatus("Error conectando a backend");
+      });
 
-        socket.on("mensaje", (data) => {
-          addLog(`WS: ${JSON.stringify(data)}`);
-        });
+      socket.on("serial_status", (data) => {
+        setConnected(data.connected);
+        setPortName(data.port || "N/A");
+        setStatus(data.connected ? `Conectado a ${data.port}` : "No conectado");
+      });
 
-        socket.on("serial_status", (data) => {
-          setConnected(data.connected);
-          setPortName(data.port || "N/A");
-          setStatus(data.connected ? `Conectado a ${data.port}` : "No conectado");
-        });
+      socket.on("serial_tx", (data) => {
+        addLog(`TX -> ${data.cmd}`);
+      });
 
-        socket.on("serial_tx", (data) => {
-          addLog(`TX -> ${data.cmd}`);
-        });
+      socket.on("serial_raw", (data) => {
+        if (typeof data.raw === "string" && !data.raw.startsWith("DATA,")) {
+          addLog(`RX raw -> ${data.raw}`);
+        }
+      });
 
-        socket.on("serial_raw", (data) => {
-          if (typeof data.raw === "string" && !data.raw.startsWith("DATA,")) {
-            addLog(`RX raw -> ${data.raw}`);
-          }
-        });
+      socket.on("serial_data", (data) => {
+        if (data.tipo === "DATA" || data.tipo === "REAL_DATA") {
+          const deriv = data.derivada || "---";
+          setDerivada(deriv);
+          setBpm(Number(data.bpm).toFixed(1));
+          setLastEvent("Datos actualizados");
+          setHasRealData(true);
+          lastDataTime.current = Date.now();
 
-        socket.on("serial_data", (data) => {
-          if (data.tipo === "DATA" || data.tipo === "REAL_DATA") {
-            const deriv = data.derivada || "---";
+          setChartYRangeFromDerivada(deriv);
+          pushECGPoint(data.ecg);
+        }
 
-            setDerivada(deriv);
-            setBpm(Number(data.bpm).toFixed(1));
-            setLastEvent("Datos actualizados");
-            setHasRealData(true);
-            lastDataTime.current = Date.now();
+        if (data.tipo === "ACK_DERIVADA") {
+          setDerivada(data.derivada || "---");
+          addLog(`Derivada -> ${data.derivada || "---"}`);
+        }
 
-            setChartYRangeFromDerivada(deriv);
-            pushECGPoint(data.ecg);
-          }
+        if (data.tipo === "ACK_ECG_ON") {
+          setStatus("ECG iniciado");
+          addLog("ACK_ECG_ON");
+        }
 
-          if (data.tipo === "ACK_DERIVADA") {
-            setDerivada(data.derivada || "---");
-            setLastEvent("Derivada actualizada");
-            addLog(`Derivada -> ${data.derivada || "---"}`);
-          }
+        if (data.tipo === "ACK_ECG_OFF") {
+          setStatus("ECG detenido");
+          addLog("ACK_ECG_OFF");
+        }
 
-          if (data.tipo === "AUTO_DERIVADA") {
-            setDerivada(data.derivada || "---");
-            setMode("auto");
-            setLastEvent("Modo auto activado");
-            addLog(`Auto derivada -> ${data.derivada || "---"}`);
-          }
+        if (data.tipo === "ACK_AUTO_ON") {
+          setMode("auto");
+          setStatus("Modo automático");
+          addLog("ACK_AUTO_ON");
+        }
 
-          if (data.tipo === "ACK_ECG_ON") {
-            setStatus("ECG iniciado");
-            setLastEvent("ECG activado");
-            addLog("ACK_ECG_ON");
-          }
+        if (data.tipo === "ACK_MANUAL_ON") {
+          setMode("manual");
+          setStatus("Modo manual");
+          addLog("ACK_MANUAL_ON");
+        }
 
-          if (data.tipo === "ACK_ECG_OFF") {
-            setStatus("ECG detenido");
-            setLastEvent("ECG detenido");
-            addLog("ACK_ECG_OFF");
-          }
+        if (data.tipo === "READY") {
+          setStatus("ESP32 listo");
+          addLog("READY");
+        }
+      });
 
-          if (data.tipo === "ACK_AUTO_ON") {
-            setMode("auto");
-            setStatus("Modo automático");
-            setLastEvent("Auto encendido");
-            addLog("ACK_AUTO_ON");
-          }
-
-          if (data.tipo === "ACK_MANUAL_ON") {
-            setMode("manual");
-            setStatus("Modo manual");
-            setLastEvent("Manual activado");
-            addLog("ACK_MANUAL_ON");
-          }
-
-          if (data.tipo === "READY") {
-            setStatus("ESP32 listo");
-            setLastEvent("Dispositivo listo");
-            addLog("READY");
-          }
-        });
-
-        socket.on("disconnect", () => {
-          setConnected(false);
-          setStatus("Socket desconectado");
-          addLog("Socket desconectado", "warn");
-        });
-      } catch (err) {
-        addLog(`Error inicializando Socket.io: ${err.message}`, "error");
-        setStatus("Error inicializando socket");
-      }
+      socket.on("disconnect", () => {
+        setConnected(false);
+        setStatus("Socket desconectado");
+        addLog("Socket desconectado", "warn");
+      });
     }
 
     return () => {
@@ -431,268 +410,116 @@ function App() {
   return React.createElement(
     "div",
     { className: "app-shell" },
-    React.createElement(
-      "div",
-      { className: "topbar" },
-      React.createElement(
-        "div",
-        { className: "brand" },
+    React.createElement("div", { className: "topbar" },
+      React.createElement("div", { className: "brand" },
         React.createElement("span", null, "ECG Control Center"),
-        React.createElement(
-          "div",
-          null,
+        React.createElement("div", null,
           React.createElement("h1", null, "Interfaz de monitoreo ECG"),
-          React.createElement(
-            "p",
-            { className: "subtitle" },
-            "Visualización de ECG real desde ESP32 en tiempo real."
-          )
+          React.createElement("p", { className: "subtitle" }, "Visualización de ECG real desde ESP32 en tiempo real.")
         )
       ),
-      React.createElement(
-        "div",
-        { className: "status-pill" + (connected ? "" : " disconnected") },
+      React.createElement("div", { className: "status-pill" + (connected ? "" : " disconnected") },
         React.createElement("span", { className: "dot" }),
         connected ? `Conectado a ${portName}` : "Desconectado"
       )
     ),
-    React.createElement(
-      "div",
-      { className: "grid-surface" },
-      React.createElement(
-        "div",
-        { className: "card" },
-        React.createElement(
-          "div",
-          { className: "section-title" },
+
+    React.createElement("div", { className: "grid-surface" },
+      React.createElement("div", { className: "card" },
+        React.createElement("div", { className: "section-title" },
           React.createElement("h2", null, "Conexión serial"),
           React.createElement("p", null, "Selecciona y controla el puerto ECG.")
         ),
-        React.createElement(
-          "div",
-          { className: "control-group" },
-          React.createElement(
-            "div",
-            { className: "form-row" },
+        React.createElement("div", { className: "control-group" },
+          React.createElement("div", { className: "form-row" },
             React.createElement("label", { htmlFor: "ports" }, "Puerto serial"),
-            React.createElement(
-              "select",
-              {
-                id: "ports",
-                value: selectedPort,
-                onChange: (event) => setSelectedPort(event.target.value)
-              },
+            React.createElement("select", {
+              id: "ports",
+              value: selectedPort,
+              onChange: (event) => setSelectedPort(event.target.value)
+            },
               ports.map((port) =>
-                React.createElement(
-                  "option",
-                  { key: port.path, value: port.path },
-                  `${port.path}${port.friendlyName ? ` -- ${port.friendlyName}` : ""}`
-                )
+                React.createElement("option", { key: port.path, value: port.path }, `${port.path}${port.friendlyName ? ` -- ${port.friendlyName}` : ""}`)
               )
             )
           ),
-          React.createElement(
-            "div",
-            { className: "button-row" },
-            React.createElement(
-              "button",
-              { className: "btn btn-secondary", onClick: loadPorts },
-              "Actualizar puertos"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-primary", onClick: connectPort },
-              "Conectar"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: checkStatus },
-              "Ver estado"
-            )
+          React.createElement("div", { className: "button-row" },
+            React.createElement("button", { className: "btn btn-secondary", onClick: loadPorts }, "Actualizar puertos"),
+            React.createElement("button", { className: "btn btn-primary", onClick: connectPort }, "Conectar"),
+            React.createElement("button", { className: "btn btn-soft", onClick: checkStatus }, "Ver estado")
           )
         )
       ),
-      React.createElement(
-        "div",
-        { className: "card" },
-        React.createElement(
-          "div",
-          { className: "section-title" },
+
+      React.createElement("div", { className: "card" },
+        React.createElement("div", { className: "section-title" },
           React.createElement("h2", null, "Indicadores clave"),
           React.createElement("p", null, "Resumen rápido del estado del ECG.")
         ),
-        React.createElement(
-          "div",
-          { className: "metric-grid" },
-          React.createElement(
-            "div",
-            { className: "metric-card" },
+        React.createElement("div", { className: "metric-grid" },
+          React.createElement("div", { className: "metric-card" },
             React.createElement("h3", null, "Estado"),
-            React.createElement("p", { className: "metric-highlight" }, statusMessage),
-            React.createElement(
-              "div",
-              { className: "metric-caption" },
-              connected ? "Comunicación estable" : "No hay conexión activa"
-            )
+            React.createElement("p", { className: "metric-highlight" }, statusMessage)
           ),
-          React.createElement(
-            "div",
-            { className: "metric-card" },
+          React.createElement("div", { className: "metric-card" },
             React.createElement("h3", null, "Derivada activa"),
-            React.createElement("p", null, derivada),
-            React.createElement("div", { className: "metric-caption" }, "Línea de ECG seleccionada")
+            React.createElement("p", null, derivada)
           ),
-          React.createElement(
-            "div",
-            { className: "metric-card" },
+          React.createElement("div", { className: "metric-card" },
             React.createElement("h3", null, "Ritmo cardiaco"),
-            React.createElement("p", null, bpm),
-            React.createElement("div", { className: "metric-caption" }, "BPM en tiempo real")
+            React.createElement("p", null, bpm)
           )
         )
       )
     ),
-    React.createElement(
-      "div",
-      { className: "grid-surface" },
-      React.createElement(
-        "div",
-        { className: "card" },
-        React.createElement(
-          "div",
-          { className: "section-title" },
+
+    React.createElement("div", { className: "grid-surface" },
+      React.createElement("div", { className: "card" },
+        React.createElement("div", { className: "section-title" },
           React.createElement("h2", null, "Controles rápidos"),
-          React.createElement("p", null, "Acciones directas para tu ECG y modos de operación.")
+          React.createElement("p", null, "Acciones directas para tu ECG.")
         ),
-        React.createElement(
-          "div",
-          { className: "controls" },
-          React.createElement(
-            "div",
-            { className: "button-row" },
-            React.createElement(
-              "button",
-              { className: "btn btn-primary", onClick: () => sendCommand("e", "Iniciar ECG"), disabled: !connected },
-              "Iniciar ECG"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-danger", onClick: () => sendCommand("s", "Detener ECG"), disabled: !connected },
-              "Detener ECG"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-accent", onClick: () => sendCommand("a", "Modo Auto"), disabled: !connected },
-              "Modo Auto"
-            )
+        React.createElement("div", { className: "controls" },
+          React.createElement("div", { className: "button-row" },
+            React.createElement("button", { className: "btn btn-primary", onClick: () => sendCommand("e", "Iniciar ECG"), disabled: !connected }, "Iniciar ECG"),
+            React.createElement("button", { className: "btn btn-danger", onClick: () => sendCommand("s", "Detener ECG"), disabled: !connected }, "Detener ECG"),
+            React.createElement("button", { className: "btn btn-accent", onClick: () => sendCommand("a", "Modo Auto"), disabled: !connected }, "Modo Auto")
           ),
-          React.createElement(
-            "div",
-            { className: "button-row" },
-            React.createElement(
-              "button",
-              { className: "btn btn-secondary", onClick: () => sendCommand("m", "Modo Manual"), disabled: !connected },
-              "Modo Manual"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("1", "Derivada 1"), disabled: !connected },
-              "Derivada 1"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("2", "Derivada 2"), disabled: !connected },
-              "Derivada 2"
-            )
-          ),
-          React.createElement(
-            "div",
-            { className: "button-row" },
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("3", "Derivada 3"), disabled: !connected },
-              "Derivada 3"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("4", "Derivada 4"), disabled: !connected },
-              "Derivada 4"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("5", "Derivada 5"), disabled: !connected },
-              "Derivada 5"
-            )
-          ),
-          React.createElement(
-            "div",
-            { className: "button-row" },
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("6", "Derivada 6"), disabled: !connected },
-              "Derivada 6"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-secondary", onClick: () => setStatus(`Último evento: ${lastEvent}`) },
-              "Actualizar panel"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-secondary", disabled: true },
-              mode === "auto" ? "Activo: automático" : "Activo: manual"
-            )
+          React.createElement("div", { className: "button-row" },
+            React.createElement("button", { className: "btn btn-secondary", onClick: () => sendCommand("m", "Modo Manual"), disabled: !connected }, "Modo Manual"),
+            React.createElement("button", { className: "btn btn-soft", onClick: () => sendCommand("1", "Derivada 1"), disabled: !connected }, "Derivada 1"),
+            React.createElement("button", { className: "btn btn-soft", onClick: () => sendCommand("2", "Derivada 2"), disabled: !connected }, "Derivada 2")
           )
         )
       ),
-      React.createElement(
-        "div",
-        { className: "card chart-card" },
-        React.createElement(
-          "div",
-          { className: "section-title" },
-          React.createElement(
-            "div",
-            null,
+
+      React.createElement("div", { className: "card chart-card" },
+        React.createElement("div", { className: "section-title" },
+          React.createElement("div", null,
             React.createElement("h2", null, "ECG en tiempo real"),
             React.createElement("p", null, "Señal real proveniente del ESP32.")
           ),
-          React.createElement(
-            "div",
-            { className: "tag " + (connected ? "connected" : "disconnected") },
+          React.createElement("div", { className: "tag " + (connected ? "connected" : "disconnected") },
             connected ? "Conectado" : "Desconectado"
           )
         ),
-        React.createElement(
-          "div",
-          { className: "chart-controls" },
-          React.createElement(
-            "button",
-            {
-              className: "btn btn-signal " + (showECG ? "signal-active" : "signal-inactive"),
-              onClick: toggleShowECG
-            },
-            showECG ? "[ON] ECG" : "ECG"
-          )
+        React.createElement("div", { className: "chart-controls" },
+          React.createElement("button", {
+            className: "btn btn-signal " + (showECG ? "signal-active" : "signal-inactive"),
+            onClick: toggleShowECG
+          }, showECG ? "[ON] ECG" : "ECG")
         ),
         React.createElement("canvas", { ref: chartRef, width: 800, height: 260 })
       )
     ),
-    React.createElement(
-      "div",
-      { className: "grid-surface" },
-      React.createElement(
-        "div",
-        { className: "card log-panel" },
-        React.createElement(
-          "div",
-          { className: "section-title" },
+
+    React.createElement("div", { className: "grid-surface" },
+      React.createElement("div", { className: "card log-panel" },
+        React.createElement("div", { className: "section-title" },
           React.createElement("h2", null, "Actividad del sistema"),
-          React.createElement("p", null, "Registro de eventos recientes y respuestas del dispositivo.")
+          React.createElement("p", null, "Registro de eventos recientes.")
         ),
-        React.createElement(
-          "div",
-          { className: "log-box" },
+        React.createElement("div", { className: "log-box" },
           logs.length === 0
             ? React.createElement("div", { className: "log-line" }, "Esperando eventos...")
             : logs.map((line, index) =>
