@@ -300,6 +300,7 @@ h1 {
 .chart-card {
   display: grid;
   gap: 20px;
+  min-height: 400px;
 }
 
 .chart-controls {
@@ -331,7 +332,7 @@ h1 {
   border-radius: 22px;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9));
   border: 1px solid rgba(148, 163, 184, 0.14);
-  padding: 18px;
+  display: block;
 }
 
 
