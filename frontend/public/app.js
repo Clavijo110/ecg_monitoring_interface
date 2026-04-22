@@ -1,6 +1,5 @@
 const { useState, useEffect, useRef } = React;
 
-// Backend local para Arduino
 const getBackendURL = () => {
   return "http://localhost:3001";
 };
@@ -24,8 +23,6 @@ function App() {
   const chartNeedsUpdate = useRef(false);
   const lastDataTime = useRef(0);
 
-  // ESP32 manda DATA cada 2 muestras; si internamente toma a 250 Hz,
-  // al frontend llegan ~125 muestras/seg.
   const DISPLAY_FS = 125;
   const WINDOW_SECONDS = 5;
   const BUFFER_SIZE = DISPLAY_FS * WINDOW_SECONDS;
@@ -214,7 +211,6 @@ function App() {
     setShowECG((prev) => !prev);
   };
 
-  // Crear gráfica
   useEffect(() => {
     if (!chartRef.current) return;
 
@@ -248,9 +244,7 @@ function App() {
           tooltip: { enabled: false }
         },
         scales: {
-          x: {
-            display: false
-          },
+          x: { display: false },
           y: {
             display: true,
             min: -1200,
@@ -275,7 +269,6 @@ function App() {
     };
   }, []);
 
-  // Refresco visual desacoplado de la llegada serial
   useEffect(() => {
     const repaint = setInterval(() => {
       if (chartInstance.current && chartNeedsUpdate.current) {
@@ -287,7 +280,6 @@ function App() {
     return () => clearInterval(repaint);
   }, []);
 
-  // Carga inicial y sockets
   useEffect(() => {
     loadPorts();
     checkStatus();
@@ -336,12 +328,8 @@ function App() {
           addLog(`TX -> ${data.cmd}`);
         });
 
-        // No loguear cada raw porque atrasa la UI.
         socket.on("serial_raw", (data) => {
-          if (
-            typeof data.raw === "string" &&
-            !data.raw.startsWith("DATA,")
-          ) {
+          if (typeof data.raw === "string" && !data.raw.startsWith("DATA,")) {
             addLog(`RX raw -> ${data.raw}`);
           }
         });
@@ -424,7 +412,6 @@ function App() {
     };
   }, []);
 
-  // Si se pierde la señal real, limpiar estado pero NO meter señal falsa
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
