@@ -1,0 +1,22 @@
+{
+  "name": "ecg-monitoring-interface",
+  "version": "1.0.0",
+  "description": "Modern ECG monitoring interface with real-time visualization",
+  "main": "index.js",
+  "scripts": {
+    "start": "echo 'Frontend only - serve Public/ folder'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Clavijo110/ecg_monitoring_interface.git"
+  },
+  "keywords": [
+    "ecg",
+    "monitoring",
+    "react",
+    "real-time",
+    "healthcare"
+  ],
+  "author": "Alejandro Clavijo",
+  "license": "MIT"
+}

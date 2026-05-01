@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ECG Web Node</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    // Backend SIEMPRE en localhost para Arduino
+    window.getBackendURL = () => {
+      return 'http://localhost:3001';
+    };
+
+    console.log('🏥 ECG Monitoring Interface v1.0.0');
+    console.log('📡 Backend esperado: http://localhost:3001');
+    console.log('⚠️  Si no ves datos: Verifica que backend está corriendo (npm start)');
+  </script>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Cargar Socket.io desde el backend ANTES de app.js -->
+  <script>
+    const backendURL = window.getBackendURL();
+    const socketScript = document.createElement('script');
+    socketScript.src = backendURL + '/socket.io/socket.io.js';
+    
+    socketScript.onload = function() {
+      console.log('✅ Socket.io cargado desde:', backendURL);
+      
+      if (typeof io !== 'undefined') {
+        console.log('✅ io() está disponible, configurando conexión...');
+        
+        // Configurar Socket.io para intentar WebSocket primero, luego polling
+        window.socketConfig = {
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: 10,
+          transports: ['websocket', 'polling'],
+          extraHeaders: {}
+        };
+        
+        console.log('✅ Socket.io configurado y listo para app.js');
+        // Cargar app.js DESPUÉS de que Socket.io esté 100% listo
+        const appScript = document.createElement('script');
+        appScript.src = 'app.js';
+        document.body.appendChild(appScript);
+      } else {
+        console.error('❌ io() NO está disponible después de cargar Socket.io');
+      }
+    };
+    
+    socketScript.onerror = function() {
+      console.error('❌ No se pudo cargar Socket.io desde:', socketScript.src);
+      console.error('💡 Asegúrate que el backend está corriendo y accesible');
+      
+      // Fallback: cargar app.js de todas formas pero sin Socket.io
+      const appScript = document.createElement('script');
+      appScript.src = 'app.js';
+      document.body.appendChild(appScript);
+    };
+    
+    document.head.appendChild(socketScript);
+  </script>
+
+    <!-- Diagnostics: show message if app fails to render -->
+    <script>
+      setTimeout(() => {
+        const root = document.getElementById('root');
+        if (!root || root.children.length === 0) {
+          const box = document.createElement('div');
+          box.style.position = 'fixed';
+          box.style.left = '12px';
+          box.style.right = '12px';
+          box.style.bottom = '12px';
+          box.style.background = 'rgba(0,0,0,0.7)';
+          box.style.color = '#fff';
+          box.style.padding = '12px 16px';
+          box.style.borderRadius = '8px';
+          box.style.zIndex = 9999;
+          box.innerText = 'Error: la aplicación no se inicializó. Verifica la consola del navegador y que el backend esté corriendo en http://localhost:3001';
+          document.body.appendChild(box);
+        }
+      }, 2000);
+    </script>
+</body>
+</html>

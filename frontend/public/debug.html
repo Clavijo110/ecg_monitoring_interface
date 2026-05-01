@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ECG Debug</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #1a1a2e;
+      color: #0f3460;
+      padding: 20px;
+      margin: 0;
+    }
+    .log {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin: 5px 0;
+      font-size: 12px;
+    }
+    .success { color: #00ff00; }
+    .error { color: #ff0000; }
+    .info { color: #00ffff; }
+    h1 { color: #e94560; }
+  </style>
+</head>
+<body>
+  <h1>ECG App - Debug Console</h1>
+  <div class="log" id="log"></div>
+
+  <script>
+    const log = document.getElementById('log');
+    
+    function addLog(msg, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+      console.log(`[${type.toUpperCase()}] ${msg}`);
+    }
+
+    addLog('Iniciando debug...', 'info');
+
+    // Detectar backend
+    const getBackendURL = () => {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3001';
+      }
+      return 'https://ecg-monitoring-interface-backend.onrender.com';
+    };
+
+    const backendURL = getBackendURL();
+    addLog(`Backend URL: ${backendURL}`, 'info');
+    addLog(`Hostname: ${window.location.hostname}`, 'info');
+
+    // Test Socket.io
+    addLog('Intentando cargar Socket.io...', 'info');
+    
+    const socketScript = document.createElement('script');
+    socketScript.src = backendURL + '/socket.io/socket.io.js';
+    
+    socketScript.onload = function() {
+      addLog('✓ Socket.io cargado exitosamente', 'success');
+      
+      if (typeof io !== 'undefined') {
+        addLog('✓ io() está disponible', 'success');
+        
+        try {
+          const socket = io(backendURL);
+          
+          socket.on('connect', () => {
+            addLog('✓ Socket conectado al backend', 'success');
+          });
+          
+          socket.on('connect_error', (error) => {
+            addLog(`✗ Error de conexión Socket: ${error}`, 'error');
+          });
+          
+          socket.on('disconnect', () => {
+            addLog('Socket desconectado', 'info');
+          });
+        } catch (err) {
+          addLog(`✗ Error al crear Socket: ${err.message}`, 'error');
+        }
+      } else {
+        addLog('✗ io() NO está disponible', 'error');
+      }
+    };
+    
+    socketScript.onerror = function() {
+      addLog(`✗ No se pudo cargar Socket.io desde: ${socketScript.src}`, 'error');
+    };
+    
+    socketScript.onreadystatechange = function() {
+      if (this.readyState === 'loading') {
+        addLog('Socket.io cargando...', 'info');
+      }
+    };
+    
+    document.head.appendChild(socketScript);
+
+    // Test API
+    setTimeout(() => {
+      addLog('Probando API /health...', 'info');
+      
+      fetch(backendURL + '/health')
+        .then(res => {
+          addLog(`API /health respondió con status ${res.status}`, 'info');
+          return res.json();
+        })
+        .then(data => {
+          addLog(`✓ API respuesta: ${JSON.stringify(data)}`, 'success');
+        })
+        .catch(err => {
+          addLog(`✗ Error API: ${err.message}`, 'error');
+        });
+    }, 2000);
+
+    // Test index.html carga
+    addLog('Verificando archivos...', 'info');
+    
+    fetch('/index.html')
+      .then(res => {
+        addLog(`✓ index.html status: ${res.status}`, 'success');
+      })
+      .catch(err => {
+        addLog(`✗ Error cargando index.html: ${err.message}`, 'error');
+      });
+
+    fetch('/app.js')
+      .then(res => {
+        addLog(`✓ app.js status: ${res.status}`, 'success');
+      })
+      .catch(err => {
+        addLog(`✗ Error cargando app.js: ${err.message}`, 'error');
+      });
+
+    fetch('/style.css')
+      .then(res => {
+        addLog(`✓ style.css status: ${res.status}`, 'success');
+      })
+      .catch(err => {
+        addLog(`✗ Error cargando style.css: ${err.message}`, 'error');
+      });
+  </script>
+</body>
+</html>
