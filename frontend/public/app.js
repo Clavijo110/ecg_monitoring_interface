@@ -10,14 +10,17 @@ function App() {
   const [selectedPort, setSelectedPort] = useState("");
   const [connected, setConnected] = useState(false);
   const [portName, setPortName] = useState("");
-  const [statusMessage, setStatusMessage] = useState("Cargando estado...");
-  const [derivada, setDerivada] = useState("---");
+  const [statusMessage, setStatusMessage] = useState("ECG iniciado");
+  const [derivada, setDerivada] = useState("I");
   const [bpm, setBpm] = useState("---");
   const [logs, setLogs] = useState([]);
   const [lastEvent, setLastEvent] = useState("Sin eventos recientes");
-  const [mode, setMode] = useState("manual");
-  const [showECG, setShowECG] = useState(true);
+  const [mode, setMode] = useState("auto");
+  const [ecgRunning, setEcgRunning] = useState(true);
   const [hasRealData, setHasRealData] = useState(false);
+  const [currentDerivada, setCurrentDerivada] = useState("I");
+  const derivadaDataBuffer = useRef({}); // Buffer de datos por derivada para calcular rangos
+  const BUFFER_SIZE_PER_DERIVADA = 100; // Mantener 100 puntos por derivada para calcular rango
 
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
@@ -44,16 +47,16 @@ function App() {
     addLog(message);
   };
 
-  const DERIVADA_PP = {
-    I: 0.25,
-    II: 2.0,
-    III: 0.6,
-    aVR: 0.9,
-    aVL: 0.95,
-    aVF: 1.15,
-    AVR: 0.9,
-    AVL: 0.95,
-    AVF: 1.15
+  const DERIVADA_RANGES = {
+    I: { min: -1200, max: -300 },
+    II: { min: -1400, max: -200 },
+    III: { min: -1000, max: -400 },
+    aVR: { min: -1200, max: -300 },
+    aVL: { min: -1300, max: -250 },
+    aVF: { min: -1350, max: -200 },
+    AVR: { min: -1200, max: -300 },
+    AVL: { min: -1300, max: -250 },
+    AVF: { min: -1350, max: -200 }
   };
 
   const ADC_MAX_VOLT = 3.3;
@@ -67,22 +70,45 @@ function App() {
     return centered * 1000.0;
   };
 
+  const calculateDynamicRange = (derivada) => {
+    // Escala estática: ±2.5V = ±2500mV
+    return {
+      min: -2500,
+      max: 2500
+    };
+  };
+
   const setChartYRangeFromDerivada = (deriv) => {
     if (!chartInstance.current) return;
 
-    const pp = (DERIVADA_PP[deriv] || 2.0) * 1000.0;
-    const half = pp / 2.0;
-    const margin = 120;
-
-    chartInstance.current.options.scales.y.min = -half - margin;
-    chartInstance.current.options.scales.y.max = half + margin;
+    // Escala estática: ±2.5V
+    chartInstance.current.options.scales.y.min = -2500;
+    chartInstance.current.options.scales.y.max = 2500;
     chartNeedsUpdate.current = true;
+
+    // Actualizar inmediatamente
+    if (chartInstance.current) {
+      chartInstance.current.update();
+      chartNeedsUpdate.current = false;
+    }
   };
 
-  const pushECGPoint = (ecgValue) => {
-    if (!chartInstance.current || !showECG) return;
+  const pushECGPoint = (ecgValue, derivada) => {
+    if (!chartInstance.current) {
+      return;
+    }
 
     const point = adcToMilliVolts(ecgValue);
+
+    // Almacenar dato en buffer por derivada
+    if (!derivadaDataBuffer.current[derivada]) {
+      derivadaDataBuffer.current[derivada] = [];
+    }
+    derivadaDataBuffer.current[derivada].push(point);
+    if (derivadaDataBuffer.current[derivada].length > BUFFER_SIZE_PER_DERIVADA) {
+      derivadaDataBuffer.current[derivada].shift();
+    }
+
     const data = chartInstance.current.data.datasets[0].data;
 
     data.push(point);
@@ -91,6 +117,12 @@ function App() {
     }
 
     chartNeedsUpdate.current = true;
+
+    // Actualizar inmediatamente
+    if (chartInstance.current) {
+      chartInstance.current.update();
+      chartNeedsUpdate.current = false;
+    }
   };
 
   const clearChart = () => {
@@ -101,6 +133,9 @@ function App() {
       () => 0
     );
     chartNeedsUpdate.current = true;
+
+    // Limpiar buffers de datos por derivada
+    derivadaDataBuffer.current = {};
   };
 
   const loadPorts = async () => {
@@ -116,7 +151,9 @@ function App() {
 
       setPorts(data.ports);
       if (data.ports.length > 0) {
-        setSelectedPort(data.ports[0].path);
+        const firstPort = data.ports[0].path;
+        setSelectedPort(firstPort);
+        connectToPort(firstPort);
       }
 
       addLog(`Puertos disponibles: ${data.ports.length}`);
@@ -126,19 +163,19 @@ function App() {
     }
   };
 
-  const connectPort = async () => {
-    if (!selectedPort) {
-      addLog("Seleccione un puerto primero", "warn");
+  const connectToPort = async (portPath) => {
+    if (!portPath) {
+      addLog("No se encontró un puerto para conectar", "warn");
       return;
     }
 
     try {
-      setStatus(`Conectando a ${selectedPort}...`);
+      setStatus(`Conectando a ESP32...`);
       const backendUrl = getBackendURL();
       const res = await fetch(`${backendUrl}/api/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ portPath: selectedPort })
+        body: JSON.stringify({ portPath })
       });
       const data = await res.json();
 
@@ -147,7 +184,7 @@ function App() {
       }
 
       setConnected(true);
-      setPortName(selectedPort);
+      setPortName("ESP32");
       setStatus(data.message);
       addLog(data.message, "info");
     } catch (error) {
@@ -155,6 +192,10 @@ function App() {
       setStatus("Conexión fallida");
       addLog(`Error de conexión: ${error.message}`, "error");
     }
+  };
+
+  const connectPort = async () => {
+    await connectToPort(selectedPort);
   };
 
   const checkStatus = async () => {
@@ -181,7 +222,7 @@ function App() {
   const sendCommand = async (cmd, label) => {
     if (!connected) {
       addLog("Necesita conectar antes de enviar comandos", "warn");
-      return;
+      return false;
     }
 
     try {
@@ -202,12 +243,52 @@ function App() {
       setLastEvent(label);
 
       if (cmd === "e") {
+        setEcgRunning(true);
         clearChart();
       }
+
+      if (cmd === "s") {
+        setEcgRunning(false);
+      }
+
+      return true;
     } catch (error) {
       addLog(`Error comando ${label}: ${error.message}`, "error");
       setStatus("Error enviando comando");
+      return false;
     }
+  };
+
+  const sendDerivadaCommand = async (derivadaLabel, index) => {
+    const derivadaCmd = String(index + 1);
+
+    if (mode === "auto") {
+      // El ESP32 actual ignora el cambio directo de derivada en modo automático,
+      // así que pasamos brevemente a manual, cambiamos derivada y volvemos a auto.
+      const movedToManual = await sendCommand("m", "Modo Manual");
+      if (!movedToManual) {
+        return;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      const changed = await sendCommand(derivadaCmd, `Derivada ${derivadaLabel}`);
+      if (!changed) {
+        return;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      const backToAuto = await sendCommand("a", "Modo Auto");
+      if (!backToAuto) {
+        return;
+      }
+
+      setMode("auto");
+    } else {
+      await sendCommand(derivadaCmd, `Derivada ${derivadaLabel}`);
+    }
+
+    setCurrentDerivada(derivadaLabel);
+    setDerivada(derivadaLabel);
   };
 
   const toggleShowECG = () => {
@@ -216,14 +297,12 @@ function App() {
 
   // Crear gráfica
   useEffect(() => {
-    if (!chartRef.current) return;
-
     const ctx = chartRef.current.getContext("2d");
 
     chartInstance.current = new Chart(ctx, {
       type: "line",
       data: {
-        labels: Array.from({ length: BUFFER_SIZE }, () => ""),
+        labels: Array.from({ length: BUFFER_SIZE }, (_, i) => i.toString()),
         datasets: [
           {
             label: "ECG en vivo",
@@ -241,8 +320,6 @@ function App() {
         animation: false,
         responsive: true,
         maintainAspectRatio: false,
-        normalized: true,
-        parsing: false,
         plugins: {
           legend: { display: false },
           tooltip: { enabled: false }
@@ -253,8 +330,8 @@ function App() {
           },
           y: {
             display: true,
-            min: -1200,
-            max: 1200,
+            min: -2000,
+            max: 500,
             ticks: {
               display: true,
               callback: (v) => `${v} mV`
@@ -275,19 +352,28 @@ function App() {
     };
   }, []);
 
-  // Refresco visual desacoplado de la llegada serial
+  // Refresco visual como respaldo (solo si falla la actualización inmediata)
   useEffect(() => {
     const repaint = setInterval(() => {
       if (chartInstance.current && chartNeedsUpdate.current) {
-        chartInstance.current.update("none");
+        chartInstance.current.update();
         chartNeedsUpdate.current = false;
       }
-    }, 40);
+    }, 1000);
 
     return () => clearInterval(repaint);
   }, []);
 
-  // Carga inicial y sockets
+  // Actualización periódica del rango dinámico
+  useEffect(() => {
+    const rangeUpdateInterval = setInterval(() => {
+      if (currentDerivada && derivadaDataBuffer.current[currentDerivada]?.length >= 10) {
+        setChartYRangeFromDerivada(currentDerivada);
+      }
+    }, 2000); // Actualizar rango cada 2 segundos
+
+    return () => clearInterval(rangeUpdateInterval);
+  }, [currentDerivada]);
   useEffect(() => {
     loadPorts();
     checkStatus();
@@ -351,23 +437,28 @@ function App() {
             const deriv = data.derivada || "---";
 
             setDerivada(deriv);
+            setCurrentDerivada(deriv);
             setBpm(Number(data.bpm).toFixed(1));
             setLastEvent("Datos actualizados");
             setHasRealData(true);
             lastDataTime.current = Date.now();
 
             setChartYRangeFromDerivada(deriv);
-            pushECGPoint(data.ecg);
+            pushECGPoint(data.ecg, deriv);
           }
 
           if (data.tipo === "ACK_DERIVADA") {
             setDerivada(data.derivada || "---");
+            setCurrentDerivada(data.derivada || "---");
+            setChartYRangeFromDerivada(data.derivada || "---");
             setLastEvent("Derivada actualizada");
             addLog(`Derivada -> ${data.derivada || "---"}`);
           }
 
           if (data.tipo === "AUTO_DERIVADA") {
             setDerivada(data.derivada || "---");
+            setCurrentDerivada(data.derivada || "---");
+            setChartYRangeFromDerivada(data.derivada || "---");
             setMode("auto");
             setLastEvent("Modo auto activado");
             addLog(`Auto derivada -> ${data.derivada || "---"}`);
@@ -376,12 +467,14 @@ function App() {
           if (data.tipo === "ACK_ECG_ON") {
             setStatus("ECG iniciado");
             setLastEvent("ECG activado");
+            setEcgRunning(true);
             addLog("ACK_ECG_ON");
           }
 
           if (data.tipo === "ACK_ECG_OFF") {
             setStatus("ECG detenido");
             setLastEvent("ECG detenido");
+            setEcgRunning(false);
             addLog("ACK_ECG_OFF");
           }
 
@@ -466,7 +559,7 @@ function App() {
         "div",
         { className: "status-pill" + (connected ? "" : " disconnected") },
         React.createElement("span", { className: "dot" }),
-        connected ? `Conectado a ${portName}` : "Desconectado"
+        connected ? "ESP32" : "Desconectado"
       )
     ),
     React.createElement(
@@ -506,22 +599,7 @@ function App() {
           ),
           React.createElement(
             "div",
-            { className: "button-row" },
-            React.createElement(
-              "button",
-              { className: "btn btn-secondary", onClick: loadPorts },
-              "Actualizar puertos"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-primary", onClick: connectPort },
-              "Conectar"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: checkStatus },
-              "Ver estado"
-            )
+            { className: "button-row" }
           )
         )
       ),
@@ -541,7 +619,7 @@ function App() {
             "div",
             { className: "metric-card" },
             React.createElement("h3", null, "Estado"),
-            React.createElement("p", { className: "metric-highlight" }, statusMessage),
+            React.createElement("p", { className: "metric-highlight" }, connected ? "ESP32 listo" : "ECG desconectado"),
             React.createElement(
               "div",
               { className: "metric-caption" },
@@ -552,14 +630,14 @@ function App() {
             "div",
             { className: "metric-card" },
             React.createElement("h3", null, "Derivada activa"),
-            React.createElement("p", null, derivada),
+            React.createElement("p", { className: "metric-value metric-value--small" }, derivada),
             React.createElement("div", { className: "metric-caption" }, "Línea de ECG seleccionada")
           ),
           React.createElement(
             "div",
             { className: "metric-card" },
             React.createElement("h3", null, "Ritmo cardiaco"),
-            React.createElement("p", null, bpm),
+            React.createElement("p", { className: "metric-value metric-value--small" }, bpm),
             React.createElement("div", { className: "metric-caption" }, "BPM en tiempo real")
           )
         )
@@ -568,96 +646,83 @@ function App() {
     React.createElement(
       "div",
       { className: "grid-surface" },
-      React.createElement(
-        "div",
-        { className: "card" },
         React.createElement(
           "div",
-          { className: "section-title" },
-          React.createElement("h2", null, "Controles rápidos"),
-          React.createElement("p", null, "Acciones directas para tu ECG y modos de operación.")
-        ),
-        React.createElement(
-          "div",
-          { className: "controls" },
+          { className: "card" },
           React.createElement(
             "div",
-            { className: "button-row" },
-            React.createElement(
-              "button",
-              { className: "btn btn-primary", onClick: () => sendCommand("e", "Iniciar ECG"), disabled: !connected },
-              "Iniciar ECG"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-danger", onClick: () => sendCommand("s", "Detener ECG"), disabled: !connected },
-              "Detener ECG"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-accent", onClick: () => sendCommand("a", "Modo Auto"), disabled: !connected },
-              "Modo Auto"
-            )
+            { className: "section-title" },
+            React.createElement("h2", null, "Controles rápidos"),
+            React.createElement("p", null, "Acciones directas para tu ECG y modos de operación.")
           ),
           React.createElement(
             "div",
-            { className: "button-row" },
+            { className: "controls controls--split" },
+            // Sección 1: Control del ECG
             React.createElement(
-              "button",
-              { className: "btn btn-secondary", onClick: () => sendCommand("m", "Modo Manual"), disabled: !connected },
-              "Modo Manual"
+              "div",
+              { className: "control-section" },
+              React.createElement("h4", null, "Control del ECG"),
+              React.createElement(
+                "div",
+                { className: "button-row" },
+                React.createElement(
+                  "button",
+                  { className: `btn btn-lg ${ecgRunning ? 'btn-primary' : 'btn-soft'}`, onClick: () => sendCommand("e", "Iniciar ECG"), disabled: !connected },
+                  "Iniciar ECG"
+                ),
+                React.createElement(
+                  "button",
+                  { className: `btn btn-lg ${ecgRunning ? 'btn-soft' : 'btn-danger'}`, onClick: () => sendCommand("s", "Detener ECG"), disabled: !connected },
+                  "Detener ECG"
+                )
+              )
             ),
+            // Sección 2: Modo de operación
             React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("1", "Derivada 1"), disabled: !connected },
-              "Derivada 1"
+              "div",
+              { className: "control-section" },
+              React.createElement("h4", null, "Modo de operación"),
+              React.createElement(
+                "div",
+                { className: "button-row" },
+                React.createElement(
+                  "button",
+                  { className: `btn ${mode === "auto" ? "btn-auto" : "btn-soft"}`, onClick: () => { sendCommand("a", "Modo Auto"); setMode("auto"); }, disabled: !connected },
+                  "Auto"
+                ),
+                React.createElement(
+                  "button",
+                  { className: `btn ${mode === "manual" ? "btn-manual" : "btn-soft"}`, onClick: () => { sendCommand("m", "Modo Manual"); setMode("manual"); }, disabled: !connected },
+                  "Manual"
+                )
+              )
             ),
+            // Sección 3: Selección de derivada
             React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("2", "Derivada 2"), disabled: !connected },
-              "Derivada 2"
-            )
-          ),
-          React.createElement(
-            "div",
-            { className: "button-row" },
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("3", "Derivada 3"), disabled: !connected },
-              "Derivada 3"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("4", "Derivada 4"), disabled: !connected },
-              "Derivada 4"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("5", "Derivada 5"), disabled: !connected },
-              "Derivada 5"
-            )
-          ),
-          React.createElement(
-            "div",
-            { className: "button-row" },
-            React.createElement(
-              "button",
-              { className: "btn btn-soft", onClick: () => sendCommand("6", "Derivada 6"), disabled: !connected },
-              "Derivada 6"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-secondary", onClick: () => setStatus(`Último evento: ${lastEvent}`) },
-              "Actualizar panel"
-            ),
-            React.createElement(
-              "button",
-              { className: "btn btn-secondary", disabled: true },
-              mode === "auto" ? "Activo: automático" : "Activo: manual"
+              "div",
+              { className: "control-section" },
+              React.createElement("h4", null, "Selección de derivada"),
+              React.createElement(
+                "div",
+                { className: "derivadas-grid" },
+                // Mapear derivadas visibles con colores y estado activo
+                ["I", "II", "III", "aVR", "aVL", "aVF"].map((d, idx) =>
+                  React.createElement(
+                    "button",
+                    {
+                      key: d,
+                      className: `btn derivada-btn ${currentDerivada === d ? 'active' : ''}`,
+                      onClick: () => sendDerivadaCommand(d, idx),
+                      disabled: !connected
+                    },
+                    d
+                  )
+                )
+              )
             )
           )
-        )
-      ),
+        ),
       React.createElement(
         "div",
         { className: "card chart-card" },
@@ -678,42 +743,12 @@ function App() {
         ),
         React.createElement(
           "div",
-          { className: "chart-controls" },
-          React.createElement(
-            "button",
-            {
-              className: "btn btn-signal " + (showECG ? "signal-active" : "signal-inactive"),
-              onClick: toggleShowECG
-            },
-            showECG ? "[ON] ECG" : "ECG"
-          )
+          { className: "chart-controls" }
         ),
         React.createElement("canvas", { ref: chartRef, width: 800, height: 260 })
       )
     ),
-    React.createElement(
-      "div",
-      { className: "grid-surface" },
-      React.createElement(
-        "div",
-        { className: "card log-panel" },
-        React.createElement(
-          "div",
-          { className: "section-title" },
-          React.createElement("h2", null, "Actividad del sistema"),
-          React.createElement("p", null, "Registro de eventos recientes y respuestas del dispositivo.")
-        ),
-        React.createElement(
-          "div",
-          { className: "log-box" },
-          logs.length === 0
-            ? React.createElement("div", { className: "log-line" }, "Esperando eventos...")
-            : logs.map((line, index) =>
-                React.createElement("div", { key: index, className: "log-line" }, line)
-              )
-        )
-      )
-    )
+    
   );
 }
 
