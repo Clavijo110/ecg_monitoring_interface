@@ -458,7 +458,7 @@ h1 {
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 240px;
+  gap: 18px;
 }
 
 .metric-card {
@@ -466,7 +466,7 @@ h1 {
   border: 1px solid rgba(148, 163, 184, 0.14);
   border-radius: 24px;
   padding: 24px;
-  width: 220px;
+  width: auto;
 }
 
 .metric-card h3 {
@@ -609,6 +609,51 @@ h1 {
 
 @media (max-width: 520px) {
   #root {
-    padding: 18px 14px 32px;
+    padding: 16px 12px 28px;
+  }
+
+  h1 {
+    font-size: 2.6rem;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .brand span {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .subtitle {
+    max-width: 100%;
+    font-size: 0.95rem;
+  }
+
+  .card,
+  .control-panel,
+  .chart-card,
+  .metric-card,
+  .log-box {
+    padding: 18px;
+  }
+
+  .chart-card {
+    min-height: 240px;
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .button-row,
+  .derivada-row {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-surface {
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
 }

@@ -6,7 +6,7 @@ const getBackendURL = () => {
 };
 
 function App() {
-  console.log("🔄 Inicializando ECG App...");
+  // console.log("🔄 Inicializando ECG App...");
   const [ports, setPorts] = useState([]);
   const [selectedPort, setSelectedPort] = useState("");
   const [connected, setConnected] = useState(false);
