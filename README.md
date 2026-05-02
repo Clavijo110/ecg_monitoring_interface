@@ -177,6 +177,28 @@ El backend detecta automáticamente los puertos seriales disponibles. Si tienes 
 - ✅ **WebSocket**: La comunicación en tiempo real requiere el backend local
 - ✅ **Datos seguros**: Los datos sensibles no se muestran en consola
 
+### Troubleshooting de Vercel
+
+Si Vercel no actualiza automáticamente:
+
+1. **Forzar redeploy manual:**
+   - Ve a [vercel.com/dashboard](https://vercel.com/dashboard)
+   - Selecciona tu proyecto
+   - Ve a "Deployments" → "Redeploy"
+
+2. **Limpiar cache:**
+   - Settings → Git → "Delete Cache"
+   - Haz un nuevo commit
+
+3. **Verificar logs:**
+   - En "Deployments", haz clic en el build
+   - Revisa "Build Logs" para errores
+
+4. **Script de diagnóstico:**
+   ```bash
+   troubleshoot-vercel.bat
+   ```
+
 ### Arquitectura del Despliegue
 
 ```
