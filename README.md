@@ -154,22 +154,21 @@ El backend detecta automáticamente los puertos seriales disponibles. Si tienes 
 
 ### Configuración del Repositorio
 
-1. **Sube el código a GitHub:**
+1. **El código ya está subido a GitHub:**
    ```bash
-   # Crear repositorio en GitHub llamado 'ecg-monitoring-system'
-   git remote add origin https://github.com/tu-usuario/ecg-monitoring-system.git
-   git push -u origin master
+   # Repositorio: https://github.com/Clavijo110/ecg_monitoring_interface
+   # Ya configurado y listo para despliegue
    ```
 
-2. **Despliega en Vercel:**
-   - Ve a [vercel.com](https://vercel.com) y conecta tu cuenta de GitHub
-   - Importa el repositorio `ecg-monitoring-system`
-   - Vercel detectará automáticamente la configuración en `ecg_web_node/vercel.json`
-   - El despliegue se completará automáticamente
+2. **Despliegue automático en Vercel:**
+   - El repositorio ya está conectado a Vercel
+   - Los cambios se despliegan automáticamente
+   - URL de producción: [https://ecg-monitoring-system.vercel.app](https://ecg-monitoring-system.vercel.app)
 
 3. **Accede a tu aplicación:**
-   - Vercel te dará una URL como: `https://ecg-monitoring-system.vercel.app`
-   - La interfaz estará disponible públicamente
+   - ✅ **Frontend público**: Interfaz web disponible 24/7
+   - ✅ **Backend local**: Ejecuta `run-all.bat` para comunicación ESP32
+   - ✅ **Datos seguros**: Sin logs sensibles en consola
 
 ### Notas del Despliegue
 

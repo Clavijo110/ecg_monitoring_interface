@@ -1,0 +1,25 @@
+{
+  "buildCommand": "echo 'Static frontend build - ECG Monitoring Interface'",
+  "outputDirectory": "ecg_web_node/frontend/public",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        }
+      ]
+    }
+  ]
+}
