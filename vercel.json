@@ -1,6 +1,6 @@
 {
-  "buildCommand": "echo 'Static frontend build - ECG Monitoring Interface'",
-  "outputDirectory": "ecg_web_node/frontend/public",
+  "buildCommand": "mkdir -p public && cp -r ecg_web_node/frontend/public/* public/",
+  "outputDirectory": "public",
   "rewrites": [
     {
       "source": "/(.*)",
