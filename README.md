@@ -150,9 +150,43 @@ El backend detecta automáticamente los puertos seriales disponibles. Si tienes 
 - En Windows: Ejecuta el backend como administrador si hay problemas con puertos seriales
 - En Linux/Mac: Asegúrate de tener permisos para acceder a dispositivos USB
 
-## 📄 Licencia
+## � Despliegue en Vercel
 
-MIT - Ver archivo LICENSE para más detalles.
+### Configuración del Repositorio
+
+1. **Sube el código a GitHub:**
+   ```bash
+   # Crear repositorio en GitHub llamado 'ecg-monitoring-system'
+   git remote add origin https://github.com/tu-usuario/ecg-monitoring-system.git
+   git push -u origin master
+   ```
+
+2. **Despliega en Vercel:**
+   - Ve a [vercel.com](https://vercel.com) y conecta tu cuenta de GitHub
+   - Importa el repositorio `ecg-monitoring-system`
+   - Vercel detectará automáticamente la configuración en `ecg_web_node/vercel.json`
+   - El despliegue se completará automáticamente
+
+3. **Accede a tu aplicación:**
+   - Vercel te dará una URL como: `https://ecg-monitoring-system.vercel.app`
+   - La interfaz estará disponible públicamente
+
+### Notas del Despliegue
+
+- ✅ **Frontend estático**: Solo se despliega la interfaz web
+- ✅ **Backend local**: El backend Node.js debe ejecutarse localmente para la comunicación con ESP32
+- ✅ **WebSocket**: La comunicación en tiempo real requiere el backend local
+- ✅ **Datos seguros**: Los datos sensibles no se muestran en consola
+
+### Arquitectura del Despliegue
+
+```
+🌐 Vercel (Frontend Estático)
+    ↓
+🏠 Local Backend (Node.js + WebSocket)
+    ↓
+🔌 ESP32 (Datos ECG)
+```
 
 ## 👨‍💻 Autor
 
