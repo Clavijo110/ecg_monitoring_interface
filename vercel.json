@@ -1,5 +1,4 @@
 {
-  "buildCommand": "mkdir -p public && cp -r ecg_web_node/frontend/public/* public/",
   "outputDirectory": "public",
   "rewrites": [
     {
